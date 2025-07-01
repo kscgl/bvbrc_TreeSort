@@ -1,0 +1,174 @@
+<html>
+<head>
+   <style>
+      
+      .treesort-page {
+         font-family: "Helvetica Neue", Helvetica, Aria;
+         padding: 1.0rem;
+      }
+
+      .treesort-page hr {
+         border-color: rgba(127, 127, 127, 0.2);
+      }
+
+      .treesort--title {
+         margin-bottom: 2.0rem;
+      }
+
+      .treesort--section-title {
+         border-color: rgba(127, 127, 127, 0.2);
+         border-style: solid;
+         border-width: 0 0 1px 0;
+         width: 100%;
+      }
+
+      .treesort--background-info {
+         margin-bottom: 2.0rem;
+      }
+
+      .treesort--output-file-panel {
+         margin-bottom: 2.0rem;
+      }
+
+      .treesort--segment-title {
+         margin-bottom: 0.25rem;
+      }
+
+      /* The table of segment-specific file data. */
+      .treesort--segment-table {
+         border-collapse: collapse;
+         font-family: sans-serif;
+         font-size: 0.95rem;
+         margin: 0.5rem 0 1.5rem 0;
+         text-align: left;
+         width: 100%;
+      }
+      .treesort--segment-table th, .treesort--segment-table td {
+         border: 1px solid #ccc;
+         padding: 0.75em 1em;
+      }
+      .treesort--segment-table th {
+         background-color: #f5f5f5;
+         font-weight: bold;
+      }
+      .treesort--segment-table th.treesort--file {
+         width: 40%;
+      }
+
+      .treesort--segment-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+      }
+      .treesort--segment-table tr:hover {
+         background-color: #f1f1f1;
+      }
+
+   </style>
+</head>
+<body>
+   <div class="treesort-page">
+      <h1 class="treesort--title">TreeSort analysis results</h1>
+
+      <h2 class="treesort--section-title">About the results</h2>
+      <div class="treesort--background-info">The TreeSort tool infers both recent and ancestral reassortment events along the branches of a phylogenetic 
+      tree of a fixed genomic segment. It uses a statistical hypothesis testing framework to identify branches where reassortment with 
+      other segments has occurred and reports these events.<br/><br/>
+      TODO: A description of what to expect in the results. 
+      </div>
+
+      <h2 class="treesort--section-title">Results</h2>
+
+      <h3>Annotated tree file</h3>
+      <div class="treesort--output-file-panel">
+      The primary result of the analysis is an annotated tree file: <span id="treesort_output_file"></span>. Information about reassorted segments
+      is displayed in the tree visualization at the associated nodes (strains).
+      </div>
+
+      <h3>Segment-specific files</h3>
+      <div id="treesort_segment_files"></div>
+   </div>
+
+   <script type="text/javascript">
+
+      // Variables populated from jobdesc.json.
+      const outputFolder = "{{output_path}}"; // "/ddempsey@bvbrc/home/TreeSort/swine_H1/output";
+      const outputName = "{{output_file}}"; // "test_070125";
+
+      // The output folder + output name in the workspace.
+      const workspaceFolder = `${outputFolder}/${outputName}`;
+
+      // TODO: This should only be populated with segments that were analyzed!
+      const segments = ["{{segments}}"]; // ["PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"];
+
+      const segmentFiles = [
+         { label: "Alignment", path: "-input.fasta.aln", description: "The alignment file"},
+         { label: "Dates", path: "-input.fasta.aln.dates.csv", description: "Dates found in the FASTA deflines"},
+         { label: "Rooted tree", path: "-input.fasta.aln.rooted.tre", description: "The rooted tree file"},
+         { label: "Tree", path: "-input.fasta.tre", description: "The tree file"},
+
+         { label: "Outliers", path: "-input.fasta.aln.treetime/outliers.tsv", description: "A table of outlier data"},
+         { label: "Root to tip regression", path: "-input.fasta.aln.treetime/root_to_tip_regression.pdf", description: "A visualization of root-to-tip regression"},
+         { label: "Root to tip data (???)", path: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data (???)"}
+      ]
+
+
+      function populatePage() {
+
+         // Get a reference to the output file element.
+         const outputFileEl = document.getElementById("treesort_output_file");
+         if (!outputFileEl) { throw new Error("Invalid output file element"); }
+
+         // Get a reference to the "results by segment" element.
+         const resultsBySegmentEl = document.getElementById("treesort_segment_files");
+         if (!resultsBySegmentEl) { throw new Error("Invalid segment files element"); }
+
+         if (segments.length < 1) { 
+            // TODO: populate output_file?
+            resultsBySegmentEl.innerHTML = "No segment results were generated";
+            return;
+         }
+
+         // Add a link to the output file (the annotated tree file).
+         outputFileEl.innerHTML = `<a href="${workspaceFolder}/${outputName}.tre" target="_blank">${outputName}.tre</a>`;
+         
+         let html = "";
+
+         segments.forEach((segment_, index_) => {
+
+            let rowsHTML = "";
+
+            segmentFiles.forEach((file_, index_) => {
+
+               // Alternate row classes
+               const rowClass = index_ % 2 ? "treesort--even" : "treesort--odd";
+
+               const fileURL = `${workspaceFolder}/${segment_}${file_.path}`;
+
+               // Create a row for this file.
+               rowsHTML += `<tr class="${rowClass}">
+                  <td><a href="${fileURL}" target="_blank">${segment_}${file_.path}</a></td>
+                  <td>${file_.description}</td>
+               </tr>`;
+            })
+
+            html += `<h3 class="treesort--segment-title">${segment_} files</h3>
+               <table class="treesort--segment-table">
+                  <thead>
+                     <tr>
+                        <th class="treesort--file">File</th>
+                        <th>Description</th>
+                     </tr>
+                  </thead>
+                  <tbody>${rowsHTML}</tbody>
+               </table>`;
+         })
+
+         resultsBySegmentEl.innerHTML = html;
+      }
+
+      window.addEventListener('load', function() {
+         populatePage();
+      })
+      
+   </script>
+</body>
+</html>
