@@ -62,9 +62,6 @@ do
    # Copy all this segment's sequences into a segment-specific FASTA file.
    cat $main_fasta | smof grep "|${seg}|" > "${outdir}/${seg}-${name}"
 
-   # NOTE: Seqkit can be used instead of smof, if necessary.
-   #seqkit grep -r -i -p "\|${seg}\|" $main_fasta > "${outdir}/${seg}-${name}"
-   
    # Was the FASTA file created and is it non-empty?
    if [[ -s "${outdir}/${seg}-${name}" ]]; then
       

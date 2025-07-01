@@ -84,7 +84,6 @@ class ScriptOption(str, Enum):
    Deviation = "--dev"
    EqualRates = "--equal-rates"
    FastTree = "--fast"
-   IsTimeScaled = "--timetree"
    MatchOnEPI = "--match-on-epi"
    MatchOnRegex = "--match-on-regex"
    MatchOnStrain = "--match-on-strain"
@@ -130,7 +129,6 @@ class JobData:
    input_fasta_file_id: Optional[str]
    input_fasta_group_id: Optional[str]
    input_source: InputSource
-   is_time_scaled: bool
    match_regex: Optional[str]
    match_type: Optional[MatchType]
    no_collapse: bool
@@ -465,10 +463,6 @@ class TreeSortRunner:
          # Equal rates
          if self.job_data.equal_rates:
             cmd.append(ScriptOption.EqualRates.value)
-
-         # Is time scaled (timetree)
-         if self.job_data.is_time_scaled:
-            cmd.append(ScriptOption.IsTimeScaled.value)
 
          # Print the treesort command line that will be run.
          print(f"{' '.join(cmd)}\n\n")

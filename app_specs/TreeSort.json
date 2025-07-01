@@ -85,15 +85,6 @@
          "type": "enum"
       },
       {
-         "id": "is_time_scaled",
-         "allow_multiple": false,
-         "required": 0,
-         "default": null,
-         "label": "Is time scaled?",
-         "desc": "Indicates that the reference tree is time-scaled (e.g., through TreeTime)",
-         "type": "boolean"
-      },
-      {
          "id": "match_regex",
          "allow_multiple": false,
          "required": 0,

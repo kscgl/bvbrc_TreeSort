@@ -8,7 +8,6 @@
    "input_fasta_file_id": "/ddempsey@bvbrc/home/TreeSort/swine_H1/swine_H1_HANA.fasta",
    "input_fasta_group_id": null,
    "input_source": "fasta_file_id",
-   "is_time_scaled": false,
    "match_regex": null,
    "match_type": "default",
    "no_collapse": true,
