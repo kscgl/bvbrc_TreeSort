@@ -90,18 +90,11 @@
    <script type="text/javascript">
 
       // Variables populated from jobdesc.json.
-      const outputPath = "{{output_path}}";
-      let outputName = "{{output_file}}";
-      if (outputName && !outputName.endsWith(".tre")) { outputName += ".tre"; }
+      const resultFilename = "{{result_filename}}";
+      const segments = ["{{segments}}"]; // Ex. ["PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"]
+      const workspaceFolder = "{{workspace_folder}}";
 
-      // The output folder + output name in the workspace.
-      const workspaceFolder = `${outputPath}/${outputName}`;
-      console.log(`workspaceFolder = ${workspaceFolder}`)
-
-      // TODO: This should only be populated with segments that were analyzed!
-      const segments = ["{{segments}}"]; // ["PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"];
-
-      console.log("segments = ", segments)
+      console.log(`resultFilename = ${resultFilename}, segments = ${segments}, and workspaceFolder = ${workspaceFolder}`)
 
       const segmentFiles = [
          { label: "Alignment", path: "-input.fasta.aln", description: "The alignment file"},
@@ -126,13 +119,13 @@
          if (!resultsBySegmentEl) { throw new Error("Invalid segment files element"); }
 
          if (segments.length < 1) { 
-            // TODO: Should we display an error message?
-            resultsBySegmentEl.innerHTML = "No segment results were generated";
+            // Display an error message
+            resultsBySegmentEl.innerHTML = "No segments were analyzed";
             return;
          }
 
          // Add a link to the output file (the annotated tree file).
-         outputFileEl.innerHTML = `<a href="${workspaceFolder}/${outputName}" target="_blank">${outputName}</a>`;
+         outputFileEl.innerHTML = `<a href="${workspaceFolder}/${resultFilename}" target="_blank">${resultFilename}</a>`;
          
          if (!segments || segments.length < 1) {
             resultsBySegmentEl.innerHTML = "No segments were included in the analysis";
@@ -145,6 +138,10 @@
          segments.forEach((segment_, index_) => {
 
             let rowsHTML = "";
+
+            // Trim and validate the segment name.
+            segment_ = segment_.trim();
+            if (!segment_ || segment_.length < 1) { return; }
 
             segmentFiles.forEach((file_, index_) => {
 

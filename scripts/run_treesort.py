@@ -254,16 +254,15 @@ class TreeSortRunner:
             
       # The values of the JavaScript variables in the template.
       js_variables = {
-         "{{output_file}}": self.job_data.output_file,
-         "{{output_path}}": self.job_data.output_path,
-         "{{segments}}": segments
+         "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
+         "{{segments}}": segments,
+         "{{workspace_folder}}": f"{self.job_data.output_path}/{self.job_data.output_file}",
       }
 
-      print(f"\nself.job_data.output_file = {self.job_data.output_file} and self.job_data.output_path = {self.job_data.output_path}\n")
-      
       # Replace all JavaScript variable strings in the template text.
       for key, value in js_variables.items():
          html_template = html_template.replace(key, value)
+         print(f"Replaced {key} with {value}\n")
 
       # The summary file will be created in the work directory.
       summary_path = f"{self.work_directory}/{SUMMARY_FILENAME}"
