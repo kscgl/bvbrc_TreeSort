@@ -330,7 +330,9 @@ class TreeSortRunner:
          else:
             # TreeSort accepts an empty segments parameter as "all segments", but we are 
             # explicitly populating it here so it can be used when creating the summary file.
-            segments = ",".join(VALID_SEGMENTS)
+            self.job_data.segments = ",".join(VALID_SEGMENTS)
+
+         print(f"In is_job_data_valid segments = {segments}\n")
 
       except Exception as e:
          sys.stderr.write(f"Invalid job data:\n {e}\n")
