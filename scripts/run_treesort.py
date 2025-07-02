@@ -290,61 +290,9 @@ class TreeSortRunner:
          if self.job_data.inference_method not in [m.value for m in InferenceMethod]:
             self.job_data.inference_method = InferenceMethod.Local
 
-         #-----------------------------------------------------------------------------------------------------------------------------
-         # Validate the input_source.
-         #-----------------------------------------------------------------------------------------------------------------------------
-         if self.job_data.input_source not in [i.value for i in InputSource]:
-            raise ValueError("job_data.input_source is not a valid input source") 
+         # Validate the job's input_source.
+         self.validate_input_source() 
 
-         if self.job_data.input_source == InputSource.FastaFileID.value:
-
-            # Make sure an input_fasta_file_id value was provided.
-            if not self.job_data.input_fasta_file_id:
-               raise ValueError("The input FASTA file ID is invalid")
-            
-            elif self.job_data.input_fasta_file_id.startswith("ws:"):
-
-               # Remove the "ws:" prefix from the directory name.
-               self.job_data.input_fasta_file_id = self.job_data.input_fasta_file_id[3:]
-
-         elif self.job_data.input_source == InputSource.FastaGroupID:
-
-            # Make sure an input_fasta_group_id value was provided.
-            if not self.job_data.input_fasta_group_id:
-               raise ValueError("The input FASTA group ID is invalid")
-            
-            elif self.job_data.input_fasta_group_id.startswith("ws:"):
-
-               # Remove the "ws:" prefix from the directory name.
-               self.job_data.input_fasta_group_id = self.job_data.input_fasta_group_id[3:]
-
-            # TODO: Figure out the best way to handle this.
-            raise ValueError("Processing genome groups is not yet supported")
-         
-         elif self.job_data.input_source == InputSource.FastaExistingDataset:
-
-            # If input_source is an existing dataset, make sure an input_fasta_existing_dataset value was provided.
-            if self.job_data.input_source != InputSource.FastaExistingDataset.value:
-               raise ValueError(f"The input source {self.job_data.input_source} is invalid")
-            
-            if not self.job_data.input_fasta_existing_dataset:
-               raise ValueError("A directory with an existing dataset is required")
-            
-            if self.job_data.input_fasta_existing_dataset.startswith("ws:"):
-
-               # Remove the "ws:" prefix from the directory name.
-               self.job_data.input_fasta_existing_dataset = self.job_data.input_fasta_existing_dataset[3:]
-
-            # TODO: Figure out the best way to handle this.
-            raise ValueError("Processing an existing dataset is not yet supported")
-         
-         elif self.job_data.input_source == InputSource.FastaData.value:
-
-            # Make sure an input_fasta_data value was provided.
-            if not self.job_data.input_fasta_data:
-               raise ValueError("The input FASTA data is invalid")
-
-         
          # Match type and match regex
          match_regex = safeTrim(self.job_data.match_regex)
          if self.job_data.match_type == MatchType.RegEx and len(match_regex) < 1:
@@ -358,10 +306,8 @@ class TreeSortRunner:
          if not self.job_data.output_file:
             raise ValueError("The output filename is invalid")
          
-         # Add a .tree extension to the output filename if it doesn't already have an extension.
-         fileExtRegex = r'\.[a-zA-Z]{1,3}$'
-         if not re.search(fileExtRegex, self.job_data.output_file):
-            self.job_data.output_file += TREE_FILE_EXTENSION
+         # If output_file has a file extension, remove it (it will be added later, as necessary).
+         self.job_data.output_file = os.path.splitext(self.job_data.output_file)[0]
 
          # Validate the reference segment and provide a default if not provided.
          refSegment = safeTrim(self.job_data.ref_segment)
@@ -381,6 +327,10 @@ class TreeSortRunner:
             for segment in segments.split(","):
                if not segment in VALID_SEGMENTS:
                   raise ValueError(f"Invalid segment: {segment}")
+         else:
+            # TreeSort accepts an empty segments parameter as "all segments", but we are 
+            # explicitly populating it here so it can be used when creating the summary file.
+            segments = ",".join(VALID_SEGMENTS)
 
       except Exception as e:
          sys.stderr.write(f"Invalid job data:\n {e}\n")
@@ -541,7 +491,7 @@ class TreeSortRunner:
 
          # The name of the output file to create in the work directory. 
          cmd.append(ScriptOption.OutputFilename.value)
-         cmd.append(f"{self.work_directory}/{self.job_data.output_file}")
+         cmd.append(f"{self.work_directory}/{self.job_data.output_file}{TREE_FILE_EXTENSION}")
          
          # Equal rates
          if self.job_data.equal_rates:
@@ -562,6 +512,68 @@ class TreeSortRunner:
       return result_status
 
 
+   # Validate the job's input_source.
+   def validate_input_source(self) -> bool:
+
+      if self.job_data.input_source not in [i.value for i in InputSource]:
+         raise ValueError("job_data.input_source is not a valid input source") 
+
+      if self.job_data.input_source == InputSource.FastaFileID.value:
+
+         # Make sure an input_fasta_file_id value was provided.
+         if not self.job_data.input_fasta_file_id:
+            raise ValueError("The input FASTA file ID is invalid")
+         
+         elif self.job_data.input_fasta_file_id.startswith("ws:"):
+
+            # Remove the "ws:" prefix from the directory name.
+            self.job_data.input_fasta_file_id = self.job_data.input_fasta_file_id[3:]
+      else:
+         raise ValueError("The input source is invalid")
+      
+      """
+      TODO: The following code might be used in a future release.
+
+      elif self.job_data.input_source == InputSource.FastaGroupID:
+
+         # Make sure an input_fasta_group_id value was provided.
+         if not self.job_data.input_fasta_group_id:
+            raise ValueError("The input FASTA group ID is invalid")
+         
+         elif self.job_data.input_fasta_group_id.startswith("ws:"):
+
+            # Remove the "ws:" prefix from the directory name.
+            self.job_data.input_fasta_group_id = self.job_data.input_fasta_group_id[3:]
+
+         # TODO: Figure out the best way to handle this.
+         raise ValueError("Processing genome groups is not yet supported")
+      
+      elif self.job_data.input_source == InputSource.FastaExistingDataset:
+
+         # If input_source is an existing dataset, make sure an input_fasta_existing_dataset value was provided.
+         if self.job_data.input_source != InputSource.FastaExistingDataset.value:
+            raise ValueError(f"The input source {self.job_data.input_source} is invalid")
+         
+         if not self.job_data.input_fasta_existing_dataset:
+            raise ValueError("A directory with an existing dataset is required")
+         
+         if self.job_data.input_fasta_existing_dataset.startswith("ws:"):
+
+            # Remove the "ws:" prefix from the directory name.
+            self.job_data.input_fasta_existing_dataset = self.job_data.input_fasta_existing_dataset[3:]
+
+         # TODO: Figure out the best way to handle this.
+         raise ValueError("Processing an existing dataset is not yet supported")
+      
+      elif self.job_data.input_source == InputSource.FastaData.value:
+
+         # Make sure an input_fasta_data value was provided.
+         if not self.job_data.input_fasta_data:
+            raise ValueError("The input FASTA data is invalid")
+      """
+
+      return True
+   
 
 def main(argv=None) -> bool:
     
