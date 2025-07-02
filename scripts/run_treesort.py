@@ -250,7 +250,7 @@ class TreeSortRunner:
             if len(segments) > 0:
                segments += ","
 
-            segments += f"\"{segment}\""
+            segments += segment
             
       # The values of the JavaScript variables in the template.
       js_variables = {
