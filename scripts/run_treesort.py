@@ -242,6 +242,8 @@ class TreeSortRunner:
 
       # Surround each segment with quotation marks.
       if self.job_data.segments != None and len(self.job_data.segments) > 0:
+
+         print("about to tokenize segments")
          for segment in self.job_data.segments.split(","):
 
             segment = segments.strip()
@@ -255,7 +257,9 @@ class TreeSortRunner:
             segments += segment
 
             print(f"now segments = {segments}")
-            
+      else:
+         print("segments equals none or has length < 1")
+
       # The values of the JavaScript variables in the template.
       js_variables = {
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
@@ -324,6 +328,7 @@ class TreeSortRunner:
          if not self.job_data.ref_tree_inference:
             self.job_data.ref_tree_inference = TreeInference.FastTree
 
+         print(f"in is_job_data_valid and segments initially = {self.job_data.segments}\n")
          # Validate the segments
          segments = safeTrim(self.job_data.segments)
          if len(segments) > 0:
@@ -331,6 +336,8 @@ class TreeSortRunner:
                if not segment in VALID_SEGMENTS:
                   raise ValueError(f"Invalid segment: {segment}")
          else:
+            print("segments is empty so we're adding all valid segments\n")
+            
             # TreeSort accepts an empty segments parameter as "all segments", but we are 
             # explicitly populating it here so it can be used when creating the summary file.
             self.job_data.segments = ",".join(VALID_SEGMENTS)
