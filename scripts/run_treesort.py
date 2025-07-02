@@ -244,6 +244,8 @@ class TreeSortRunner:
       if self.job_data.segments != None and len(self.job_data.segments) > 0:
          for segment in self.job_data.segments.split(","):
 
+            segment = segments.strip()
+
             if len(segment) < 1:
                continue
 
@@ -251,12 +253,14 @@ class TreeSortRunner:
                segments += ","
 
             segments += segment
+
+            print(f"now segments = {segments}")
             
       # The values of the JavaScript variables in the template.
       js_variables = {
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
          "{{segments}}": segments,
-         "{{workspace_folder}}": f"{self.job_data.output_path}/{self.job_data.output_file}",
+         "{{workspace_folder}}": f"{self.job_data.output_path}/.{self.job_data.output_file}",
       }
 
       # Replace all JavaScript variable strings in the template text.
