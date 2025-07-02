@@ -238,6 +238,8 @@ class TreeSortRunner:
       # Reformat the list of segments that were analyzed.
       segments = ""
 
+      print(f"\nself.job_data.segments = {self.job_data.segments}\n")
+
       # Surround each segment with quotation marks.
       if self.job_data.segments != None and len(self.job_data.segments) > 0:
          for segment in self.job_data.segments.split(","):
@@ -257,6 +259,8 @@ class TreeSortRunner:
          "{{segments}}": segments
       }
 
+      print(f"\nself.job_data.output_file = {self.job_data.output_file} and self.job_data.output_path = {self.job_data.output_path}\n")
+      
       # Replace all JavaScript variable strings in the template text.
       for key, value in js_variables.items():
          html_template = html_template.replace(key, value)

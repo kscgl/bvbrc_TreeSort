@@ -91,13 +91,17 @@
 
       // Variables populated from jobdesc.json.
       const outputPath = "{{output_path}}";
-      const outputName = "{{output_file}}";
+      let outputName = "{{output_file}}";
+      if (outputName && !outputName.endsWith(".tre")) { outputName += ".tre"; }
 
       // The output folder + output name in the workspace.
       const workspaceFolder = `${outputPath}/${outputName}`;
+      console.log(`workspaceFolder = ${workspaceFolder}`)
 
       // TODO: This should only be populated with segments that were analyzed!
       const segments = ["{{segments}}"]; // ["PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"];
+
+      console.log("segments = ", segments)
 
       const segmentFiles = [
          { label: "Alignment", path: "-input.fasta.aln", description: "The alignment file"},
@@ -128,10 +132,16 @@
          }
 
          // Add a link to the output file (the annotated tree file).
-         outputFileEl.innerHTML = `<a href="${workspaceFolder}/${outputName}.tre" target="_blank">${outputName}.tre</a>`;
+         outputFileEl.innerHTML = `<a href="${workspaceFolder}/${outputName}" target="_blank">${outputName}</a>`;
          
+         if (!segments || segments.length < 1) {
+            resultsBySegmentEl.innerHTML = "No segments were included in the analysis";
+            return;
+         }
+
          let html = "";
 
+         // Iterate over all segments that were included in the analysis.
          segments.forEach((segment_, index_) => {
 
             let rowsHTML = "";
