@@ -90,11 +90,11 @@
    <script type="text/javascript">
 
       // Variables populated from jobdesc.json.
-      const outputFolder = "{{output_path}}"; // "/ddempsey@bvbrc/home/TreeSort/swine_H1/output";
-      const outputName = "{{output_file}}"; // "test_070125";
+      const outputPath = "{{output_path}}";
+      const outputName = "{{output_file}}";
 
       // The output folder + output name in the workspace.
-      const workspaceFolder = `${outputFolder}/${outputName}`;
+      const workspaceFolder = `${outputPath}/${outputName}`;
 
       // TODO: This should only be populated with segments that were analyzed!
       const segments = ["{{segments}}"]; // ["PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"];
@@ -110,7 +110,7 @@
          { label: "Root to tip data (???)", path: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data (???)"}
       ]
 
-
+      // Update placeholder text on the page.
       function populatePage() {
 
          // Get a reference to the output file element.
@@ -122,7 +122,7 @@
          if (!resultsBySegmentEl) { throw new Error("Invalid segment files element"); }
 
          if (segments.length < 1) { 
-            // TODO: populate output_file?
+            // TODO: Should we display an error message?
             resultsBySegmentEl.innerHTML = "No segment results were generated";
             return;
          }

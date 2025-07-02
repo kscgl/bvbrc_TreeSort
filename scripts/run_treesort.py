@@ -205,57 +205,69 @@ class TreeSortRunner:
    # Create the summary report file.
    def create_summary_html(self) -> bool:
 
-      path = safeTrim(os.getenv("KB_TOP"))
-      if len(path) < 1:
+      top = safeTrim(os.getenv("KB_TOP"))
+      if len(top) < 1:
          raise Exception("Invalid KB_TOP environment variable in create_summary_html.")
       
-      template_path = os.path.join(path, "lib", SUMMARY_TEMPLATE_FILENAME)
+      # The path depends on whether TreeSort is run in production or development.
+      dev_path = os.path.join(top, "modules", "treesort", "lib", SUMMARY_TEMPLATE_FILENAME)
+      prod_path = os.path.join(top, "lib", SUMMARY_TEMPLATE_FILENAME)
+
+      if os.path.exists(prod_path):
+         template_path = prod_path
+      elif os.path.exists(dev_path):
+         template_path = dev_path
+      else:
+         raise Exception(f"Unable to find {SUMMARY_TEMPLATE_FILENAME}")
 
       # The HTML template file as a string.
-      template = None
+      html_template = None
 
       try:
          with open(template_path, "r", encoding="utf-8") as file:
-            template = safeTrim(file.read())
-            if len(template) < 1:
+            html_template = safeTrim(file.read())
+            if len(html_template) < 1:
                raise Exception("Invalid HTML template")
             
       except FileNotFoundError:
-         raise Exception(f"Error: The file \"{template_path}\" was not found.")
+         raise Exception(f"Error: The file {template_path} was not found.")
       
       except Exception as e:
          raise Exception(f"An error occurred: {e}")
 
+      # Reformat the list of segments that were analyzed.
       segments = ""
 
       # Surround each segment with quotation marks.
       if self.job_data.segments != None and len(self.job_data.segments) > 0:
          for segment in self.job_data.segments.split(","):
+
             if len(segment) < 1:
                continue
+
             if len(segments) > 0:
                segments += ","
 
             segments += f"\"{segment}\""
             
-      # The values of the JavaScript variables in the template HTML.
+      # The values of the JavaScript variables in the template.
       js_variables = {
          "{{output_file}}": self.job_data.output_file,
          "{{output_path}}": self.job_data.output_path,
          "{{segments}}": segments
       }
 
-      # Replace all JavaScript variable strings.
+      # Replace all JavaScript variable strings in the template text.
       for key, value in js_variables.items():
-         template = template.replace(key, value)
+         html_template = html_template.replace(key, value)
 
-      # The full path of the summary file.
+      # The summary file will be created in the work directory.
       summary_path = f"{self.work_directory}/{SUMMARY_FILENAME}"
 
       try:
          # Create the summary HTML file.
          with open(summary_path, "w+") as summary_file:
-            summary_file.write(str(template))
+            summary_file.write(str(html_template))
 
       except Exception as e:
          raise IOError(f"Error creating the summary file:\n {e}\n")
@@ -626,7 +638,10 @@ def main(argv=None) -> bool:
       sys.exit(-1)
 
    # Create a summary HTML file.
-   runner.create_summary_html()
+   if not runner.create_summary_html():
+      traceback.print_exc(file=sys.stderr)
+      sys.stderr.write("An error occurred TreeSortRunner.create_summary_html\n")
+      sys.exit(-1)
 
    return True
 
