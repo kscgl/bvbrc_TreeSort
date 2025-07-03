@@ -239,7 +239,7 @@ class TreeSortRunner:
       js_variables = {
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
          "{{segments}}": self.job_data.segments,
-         "{{workspace_folder}}": "" # f"/workspace/{self.job_data.output_path}/.{self.job_data.output_file}",
+         "{{workspace_folder}}": f"/workspace/{self.job_data.output_path}/.{self.job_data.output_file}"
       }
 
       # Replace all JavaScript variable strings in the template text.
@@ -263,7 +263,7 @@ class TreeSortRunner:
    # Is the JobData instance valid?
    def is_job_data_valid(self) -> bool:
 
-      sys.stdout.write("\nIn TreeSortRunner.is_job_data_valid\n\n")
+      sys.stdout.write("\nIn TreeSortRunner.is_job_data_valid\n")
 
       try:
          if not self.job_data or not isinstance(self.job_data, JobData):
@@ -325,7 +325,7 @@ class TreeSortRunner:
    # Determine the source of the FASTA input file and prepare it for use.
    def prepare_input_file(self) -> bool:
 
-      sys.stdout.write("\nIn TreeSortRunner.prepare_input_file\n\n")
+      sys.stdout.write("\nIn TreeSortRunner.prepare_input_file\n")
 
       try:
          # The input source determines how the input file is provided.
@@ -391,7 +391,7 @@ class TreeSortRunner:
    # Run prepare_dataset.sh to build alignments and trees and compile a descriptor file.
    def run_prepare_dataset(self) -> bool:
 
-      sys.stdout.write("\nIn TreeSortRunner.run_prepare_dataset\n\n")
+      sys.stdout.write("\nIn TreeSortRunner.run_prepare_dataset\n")
       
       # The result status defaults to false.
       result_status = False
@@ -421,7 +421,7 @@ class TreeSortRunner:
          cmd.append(self.work_directory)
 
          # Display the command about to be run.
-         print(f"{' '.join(cmd)}\n\n")
+         print(f"{' '.join(cmd)}\n")
 
          result = subprocess.run(cmd, shell=False, capture_output=True, text=True)
          if result.returncode == 0:
@@ -450,7 +450,7 @@ class TreeSortRunner:
    # Run TreeSort in a sub-process.
    def tree_sort(self) -> bool:
 
-      sys.stdout.write("\nIn TreeSortRunner.tree_sort\n\n")
+      sys.stdout.write("\nIn TreeSortRunner.tree_sort\n")
       
       # The result status defaults to false.
       result_status = False
@@ -494,7 +494,7 @@ class TreeSortRunner:
             cmd.append(ScriptOption.EqualRates.value)
 
          # Print the treesort command line that will be run.
-         print(f"{' '.join(cmd)}\n\n")
+         print(f"{' '.join(cmd)}\n")
 
          # Run the command
          result = subprocess.call(cmd, shell=False)
