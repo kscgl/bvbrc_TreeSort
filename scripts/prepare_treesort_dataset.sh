@@ -159,4 +159,7 @@ do
 done
 echo -e "The descriptor file was written to ${descriptor}\n"
 
+# Send found_segments to stdout so it can be retrieved by run_treesort.py.
+echo -e "FOUND_SEGMENTS: ${found_segments[*]}"
+
 exit 0

@@ -235,22 +235,16 @@ class TreeSortRunner:
       except Exception as e:
          raise Exception(f"An error occurred: {e}")
 
-      # Reformat the list of segments that were analyzed.
-      # segments = ""
-
-      print(f"\nself.job_data.segments = {self.job_data.segments}\n")
-
       # The values of the JavaScript variables in the template.
       js_variables = {
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
          "{{segments}}": self.job_data.segments,
-         "{{workspace_folder}}": f"{self.job_data.output_path}/.{self.job_data.output_file}",
+         "{{workspace_folder}}": f"workspace/{self.job_data.output_path}/.{self.job_data.output_file}",
       }
 
       # Replace all JavaScript variable strings in the template text.
       for key, value in js_variables.items():
          html_template = html_template.replace(key, value)
-         print(f"Replaced {key} with {value}\n")
 
       # The summary file will be created in the work directory.
       summary_path = f"{self.work_directory}/{SUMMARY_FILENAME}"
@@ -269,7 +263,7 @@ class TreeSortRunner:
    # Is the JobData instance valid?
    def is_job_data_valid(self) -> bool:
 
-      sys.stdout.write("in is_job_data_valid\n")
+      sys.stdout.write("\nIn TreeSortRunner.is_job_data_valid\n\n")
 
       try:
          if not self.job_data or not isinstance(self.job_data, JobData):
@@ -310,8 +304,6 @@ class TreeSortRunner:
          if not self.job_data.ref_tree_inference:
             self.job_data.ref_tree_inference = TreeInference.FastTree
 
-         sys.stdout.write(f"in is_job_data_valid and segments initially = {self.job_data.segments}\n")
-
          # Validate the segments
          segments = safeTrim(self.job_data.segments)
          if len(segments) > 0:
@@ -319,13 +311,9 @@ class TreeSortRunner:
                if not segment.upper() in VALID_SEGMENTS:
                   raise ValueError(f"Invalid segment: {segment}")
          else:
-            sys.stdout.write("segments is empty so we're adding all valid segments\n")
-
             # TreeSort accepts an empty segments parameter as "all segments", but we are 
             # explicitly populating it here so it can be used when creating the summary file.
             self.job_data.segments = ",".join(VALID_SEGMENTS)
-
-         sys.stdout.write(f"In is_job_data_valid segments = {self.job_data.segments}\n")
 
       except Exception as e:
          sys.stderr.write(f"Invalid job data:\n {e}\n")
@@ -435,9 +423,22 @@ class TreeSortRunner:
          # Display the command about to be run.
          print(f"{' '.join(cmd)}\n\n")
 
-         result = subprocess.call(cmd, shell=False)
-         if result == 0:
+         result = subprocess.run(cmd, shell=False, capture_output=True, text=True)
+         if result.returncode == 0:
+            
             result_status = True
+
+            # Iterate over the lines in the result's stdout to 1) look for the segments 
+            # that were found, and 2) to echo messages to stdout.
+            for line in result.stdout.strip().splitlines():
+               if line.startswith("FOUND_SEGMENTS:"):
+                  self.job_data.segments = line.replace("FOUND_SEGMENTS:", "").strip()
+
+                  print(f"segments has been updated to {self.job_data.segments}")
+                  
+               else:
+                  # Write the script's stdout to run_treesort.py's stdout.
+                  sys.stdout.write(f"{line}\n")
 
       except ValueError as e:
          sys.stderr.write(f"Error preparing dataset:\n {e}\n")
