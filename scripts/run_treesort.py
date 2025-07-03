@@ -236,34 +236,35 @@ class TreeSortRunner:
          raise Exception(f"An error occurred: {e}")
 
       # Reformat the list of segments that were analyzed.
-      segments = ""
+      # segments = ""
 
       print(f"\nself.job_data.segments = {self.job_data.segments}\n")
 
+      """
       # Surround each segment with quotation marks.
       if self.job_data.segments != None and len(self.job_data.segments) > 0:
 
          print("about to tokenize segments")
          for segment in self.job_data.segments.split(","):
 
-            segment = segments.strip()
-
-            if len(segment) < 1:
+            formatted_segment = segment.strip()
+            if len(formatted_segment) < 1:
                continue
 
             if len(segments) > 0:
                segments += ","
 
-            segments += segment
+            segments += formatted_segment
 
             print(f"now segments = {segments}")
       else:
          print("segments equals none or has length < 1")
+      """
 
       # The values of the JavaScript variables in the template.
       js_variables = {
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
-         "{{segments}}": segments,
+         "{{segments}}": self.job_data.segments,
          "{{workspace_folder}}": f"{self.job_data.output_path}/.{self.job_data.output_file}",
       }
 
@@ -288,6 +289,8 @@ class TreeSortRunner:
 
    # Is the JobData instance valid?
    def is_job_data_valid(self) -> bool:
+
+      sys.stdout.write("in is_job_data_valid\n")
 
       try:
          if not self.job_data or not isinstance(self.job_data, JobData):
@@ -328,21 +331,22 @@ class TreeSortRunner:
          if not self.job_data.ref_tree_inference:
             self.job_data.ref_tree_inference = TreeInference.FastTree
 
-         print(f"in is_job_data_valid and segments initially = {self.job_data.segments}\n")
+         sys.stdout.write(f"in is_job_data_valid and segments initially = {self.job_data.segments}\n")
+
          # Validate the segments
          segments = safeTrim(self.job_data.segments)
          if len(segments) > 0:
             for segment in segments.split(","):
-               if not segment in VALID_SEGMENTS:
+               if not segment.upper() in VALID_SEGMENTS:
                   raise ValueError(f"Invalid segment: {segment}")
          else:
-            print("segments is empty so we're adding all valid segments\n")
-            
+            sys.stdout.write("segments is empty so we're adding all valid segments\n")
+
             # TreeSort accepts an empty segments parameter as "all segments", but we are 
             # explicitly populating it here so it can be used when creating the summary file.
             self.job_data.segments = ",".join(VALID_SEGMENTS)
 
-         print(f"In is_job_data_valid segments = {segments}\n")
+         sys.stdout.write(f"In is_job_data_valid segments = {self.job_data.segments}\n")
 
       except Exception as e:
          sys.stderr.write(f"Invalid job data:\n {e}\n")
@@ -644,20 +648,17 @@ def main(argv=None) -> bool:
       sys.stderr.write(f"Unable to create an instance of TreeSortRunner:\n{e}\n")
       sys.exit(-1)
    
-   # Should we prepare the dataset?
-   if runner.job_data.input_source != InputSource.FastaExistingDataset:
-      
-      # Prepare the input file
-      if not runner.prepare_input_file():
-         traceback.print_exc(file=sys.stderr)
-         sys.stderr.write("An error occurred in TreeSortRunner.prepare_input_file\n")
-         sys.exit(-1)
+   # Prepare the input file
+   if not runner.prepare_input_file():
+      traceback.print_exc(file=sys.stderr)
+      sys.stderr.write("An error occurred in TreeSortRunner.prepare_input_file\n")
+      sys.exit(-1)
 
-      # Prepare the dataset
-      if not runner.run_prepare_dataset():
-         traceback.print_exc(file=sys.stderr)
-         sys.stderr.write("An error occurred in TreeSortRunner.run_prepare_dataset\n")
-         sys.exit(-1)
+   # Prepare the dataset
+   if not runner.run_prepare_dataset():
+      traceback.print_exc(file=sys.stderr)
+      sys.stderr.write("An error occurred in TreeSortRunner.run_prepare_dataset\n")
+      sys.exit(-1)
 
    # Run TreeSort
    if not runner.tree_sort():
