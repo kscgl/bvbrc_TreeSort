@@ -240,27 +240,6 @@ class TreeSortRunner:
 
       print(f"\nself.job_data.segments = {self.job_data.segments}\n")
 
-      """
-      # Surround each segment with quotation marks.
-      if self.job_data.segments != None and len(self.job_data.segments) > 0:
-
-         print("about to tokenize segments")
-         for segment in self.job_data.segments.split(","):
-
-            formatted_segment = segment.strip()
-            if len(formatted_segment) < 1:
-               continue
-
-            if len(segments) > 0:
-               segments += ","
-
-            segments += formatted_segment
-
-            print(f"now segments = {segments}")
-      else:
-         print("segments equals none or has length < 1")
-      """
-
       # The values of the JavaScript variables in the template.
       js_variables = {
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",

@@ -91,10 +91,13 @@
 
       // Variables populated from jobdesc.json.
       const resultFilename = "{{result_filename}}";
-      const segments = ["{{segments}}"]; // Ex. ["PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"]
+      const segmentList = "{{segments}}";
       const workspaceFolder = "{{workspace_folder}}";
 
-      console.log(`resultFilename = ${resultFilename}, segments = ${segments}, and workspaceFolder = ${workspaceFolder}`)
+      // Split the segment list into an array.
+      let segments = segmentList.split(",");
+
+      console.log("segments = ", segments, " with length ", segments.length)
 
       const segmentFiles = [
          { label: "Alignment", path: "-input.fasta.aln", description: "The alignment file"},
