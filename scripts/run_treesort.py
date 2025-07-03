@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import csv
 from dataclasses import dataclass
 from enum import Enum
 import json
@@ -21,14 +22,17 @@ BVBRC_URL = "https://www.bv-brc.org"
 # The default reference segment.
 DEFAULT_REF_SEGMENT = "HA"
 
+FORESTER_CLASS = "org.forester.application.treesort_reformate"
+FORESTER_JAR = "forester.jar"
+
 # The name of the descriptor file.
 DESCRIPTOR_FILE_NAME = "descriptor.csv"
 
 # The default name of the input FASTA file.
 INPUT_FASTA_FILE_NAME = "input.fasta"
 
-# Characters to remove from FASTA headers.
-#INVALID_FASTA_CHARS = "[\\['\"(),;:\\]]"
+# A CSV file we will create and populate with reassorted strain data.
+REASSORTMENTS_FILE_NAME = "reassortments.csv"
 
 # The name of the result directories created by TreeSort will begin
 # with a segment name and end with this suffix.
@@ -164,6 +168,9 @@ class TreeSortRunner:
 
    # The JSON data for the job.
    job_data: JobData
+
+   # Reassortment data generated in parse_annotated_tree.
+   reassorted_strains = []
 
    # The directory where the scripts will be run.
    work_directory: str
@@ -320,6 +327,111 @@ class TreeSortRunner:
          return False
 
       return True
+   
+
+   # Parse the annotated tree file for reassortment info.
+   def parse_annotated_tree(self) -> bool:
+
+      sys.stdout.write("\nIn TreeSortRunner.parse_annotated_tree\n")
+      
+      # The result status defaults to true.
+      result_status = True
+
+      # Initialize the list of reassorted strains (just in case).
+      self.reassorted_strains = []
+
+      # The path of the CSV output file and the annotated tree input file.
+      csv_file_path = f"{self.work_directory}/{self.job_data.output_file}.csv"
+      tree_file_path = f"{self.work_directory}/{self.job_data.output_file}{TREE_FILE_EXTENSION}"
+
+      # The path of the strain reassortemnts CSV file we will create.
+      reassortments_path = f"{self.work_directory}/{REASSORTMENTS_FILE_NAME}"
+
+      # Get the path for forester.jar.
+      # TODO: this is only temporary...forester.jar will be updated in the container soon (?).
+      top = safeTrim(os.getenv("KB_TOP"))
+      if len(top) < 1:
+         raise Exception("Invalid KB_TOP environment variable in parse_annotated_tree.")
+   
+      # The path depends on whether TreeSort is run in production or development.
+      dev_path = os.path.join(top, "modules", "treesort", "lib", FORESTER_JAR)
+      prod_path = os.path.join(top, "lib", FORESTER_JAR)
+
+      if os.path.exists(prod_path):
+         forester_path = prod_path
+      elif os.path.exists(dev_path):
+         forester_path = dev_path
+      else:
+         raise Exception(f"Unable to find {FORESTER_JAR}")
+
+      try:
+         cmd = ["java", "-Xmx8048m", "-cp", forester_path, FORESTER_CLASS]
+
+         # Add the path of the annotated tree file.
+         cmd.append(tree_file_path)
+
+         # Add the path of the CSV output file.
+         cmd.append(csv_file_path)
+
+         # Display the command about to be run.
+         print(f"{' '.join(cmd)}\n")
+
+         # Run the command
+         result = subprocess.call(cmd, shell=False)
+
+         # TEST 
+         if os.path.exists(csv_file_path):
+            print("Forester.jar generated the CSV file")
+
+         if result == 0 and os.path.exists(csv_file_path):
+
+            with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
+               reader = csv.reader(csvfile)
+               for row in reader:
+                  
+                  reassortment = None
+
+                  # Look for annotations in columns 1 and 2 (column 0 should have the strain name).
+                  annotation1 = row[1] if len(row) > 1 else None
+                  annotation2 = row[2] if len(row) > 2 else None
+
+                  # Did this strain have reassortment?
+                  if annotation1 == "is_reassorted=1":
+                     if not annotation2:
+                        continue
+                     reassortment = annotation2
+
+                  elif annotation2 == "is_reassorted=1":
+                     if not annotation1:
+                        continue
+                     reassortment = annotation1
+
+                  else:
+                     continue
+
+                  reassortment = reassortment.replace("rea=", "").strip()
+                  strain = row[0]
+                  if not strain:
+                     continue
+
+                  # Update the list of reassorted strains.
+                  self.reassorted_strains.append({"strain": strain, "reassortment": reassortment})
+
+         if len(self.reassorted_strains) > 0:
+
+            # Create the strain reassortments file.
+            with open(reassortments_path, "w+", newline="", encoding="utf-8") as result_file:
+               writer = csv.DictWriter(result_file, fieldnames=["strain", "reassortment"])
+               writer.writeheader()
+               writer.writerows(self.reassorted_strains)
+
+         # TODO: Should we delete the CSV file created by forester.jar?
+
+      except Exception as e:
+         sys.stderr.write(f"Error in TreeSort:\n {e}\n")
+         return False
+ 
+      return result_status
    
 
    # Determine the source of the FASTA input file and prepare it for use.
@@ -645,6 +757,9 @@ def main(argv=None) -> bool:
       traceback.print_exc(file=sys.stderr)
       sys.stderr.write("An error occurred in TreeSortRunner.tree_sort\n")
       sys.exit(-1)
+
+   # Parse the annotated tree file for reassorted strains.
+   runner.parse_annotated_tree()
 
    # Create a summary HTML file.
    if not runner.create_summary_html():
