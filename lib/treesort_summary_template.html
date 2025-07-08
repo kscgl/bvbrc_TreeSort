@@ -82,13 +82,23 @@
       is displayed in the tree visualization at the associated nodes (strains).
       </div>
 
+      reassortmentsFilename
+      <h3>Reassortment summary</h3>
+      <div class="treesort--output-file-panel">
+      The annotated tree file includes reassortment information for every node, but this is only useful for visualization. The TreeSort service 
+      parses the annotations in the tree file and generates a downloadable summary of all strains where reassortment is suspected: 
+      <span id="treesort_reassortments_file"></span>.
+      </div>
+
+
       <h3>Segment-specific files</h3>
       <div id="treesort_segment_files"></div>
    </div>
 
    <script type="text/javascript">
 
-      // Variables populated from jobdesc.json.
+      // Variables populated by run_treesort.py.
+      const reassortmentsFilename = "{{reassortments_filename}}";
       const resultFilename = "{{result_filename}}";
       const segmentList = "{{segments}}";
       const workspaceFolder = "{{workspace_folder}}";
@@ -116,6 +126,10 @@
          const outputFileEl = document.getElementById("treesort_output_file");
          if (!outputFileEl) { throw new Error("Invalid output file element"); }
 
+         // Get a reference to the "reassortments file" element.
+         const reassortmentsEl = document.getElementById("treesort_reassortments_file");
+         if (!reassortmentsEl) { throw new Error("Invalid reassortments file element"); }
+
          // Get a reference to the "results by segment" element.
          const resultsBySegmentEl = document.getElementById("treesort_segment_files");
          if (!resultsBySegmentEl) { throw new Error("Invalid segment files element"); }
@@ -129,6 +143,9 @@
          // Add a link to the output file (the annotated tree file).
          outputFileEl.innerHTML = `<a href="${workspaceFolder}/${resultFilename}" target="_blank">${resultFilename}</a>`;
          
+         // Add a link to the reassortments summary CSV file.
+         reassortmentsEl.innerHTML = `<a href="${workspaceFolder}/${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
+
          if (!segments || segments.length < 1) {
             resultsBySegmentEl.innerHTML = "No segments were included in the analysis";
             return;

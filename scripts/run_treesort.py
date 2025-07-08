@@ -22,8 +22,10 @@ BVBRC_URL = "https://www.bv-brc.org"
 # The default reference segment.
 DEFAULT_REF_SEGMENT = "HA"
 
+# The forester Java code parses the result .tre file and returns strain names and their annotations.
 FORESTER_CLASS = "org.forester.application.treesort_reformate"
 FORESTER_JAR = "forester.jar"
+FORESTER_JAVA_PARAMETERS = "-Xmx8048m"
 
 # The name of the descriptor file.
 DESCRIPTOR_FILE_NAME = "descriptor.csv"
@@ -31,8 +33,8 @@ DESCRIPTOR_FILE_NAME = "descriptor.csv"
 # The default name of the input FASTA file.
 INPUT_FASTA_FILE_NAME = "input.fasta"
 
-# A CSV file we will create and populate with reassorted strain data.
-REASSORTMENTS_FILE_NAME = "reassortments.csv"
+# A CSV file we will create and populate with reassortment data.
+REASSORTMENTS_FILE_NAME = "TreeSort_reassortments.csv"
 
 # The name of the result directories created by TreeSort will begin
 # with a segment name and end with this suffix.
@@ -212,6 +214,7 @@ class TreeSortRunner:
    # Create the summary report file.
    def create_summary_html(self) -> bool:
 
+      # The top-level path 
       top = safeTrim(os.getenv("KB_TOP"))
       if len(top) < 1:
          raise Exception("Invalid KB_TOP environment variable in create_summary_html.")
@@ -244,9 +247,10 @@ class TreeSortRunner:
 
       # The values of the JavaScript variables in the template.
       js_variables = {
+         "{{reassortments_filename}}": REASSORTMENTS_FILE_NAME,
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
          "{{segments}}": self.job_data.segments,
-         "{{workspace_folder}}": f"/workspace/{self.job_data.output_path}/.{self.job_data.output_file}"
+         "{{workspace_folder}}": f"workspace/{self.job_data.output_path}/.{self.job_data.output_file}"
       }
 
       # Replace all JavaScript variable strings in the template text.
@@ -365,7 +369,7 @@ class TreeSortRunner:
          raise Exception(f"Unable to find {FORESTER_JAR}")
 
       try:
-         cmd = ["java", "-Xmx8048m", "-cp", forester_path, FORESTER_CLASS]
+         cmd = ["java", FORESTER_JAVA_PARAMETERS, "-cp", forester_path, FORESTER_CLASS]
 
          # Add the path of the annotated tree file.
          cmd.append(tree_file_path)
@@ -378,10 +382,6 @@ class TreeSortRunner:
 
          # Run the command
          result = subprocess.call(cmd, shell=False)
-
-         # TEST 
-         if os.path.exists(csv_file_path):
-            print("Forester.jar generated the CSV file")
 
          if result == 0 and os.path.exists(csv_file_path):
 
