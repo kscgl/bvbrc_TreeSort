@@ -118,7 +118,7 @@ class TreeInference(str, Enum):
 #-----------------------------------------------------------------------------------------------------------------------------
 
 # Trim a string that's possibly null and always return a trimmed, non-null value.
-def safeTrim(text: Optional[str]):
+def safe_trim(text: Optional[str]):
    if not text:
       return ""
    else:
@@ -207,7 +207,7 @@ class TreeSortRunner:
       self.job_data = job_data
 
       # Validate the job data.
-      if not self.is_job_data_valid():
+      if not TreeSortRunner.is_job_data_valid(self.job_data):
          raise ValueError("Job data in the constructor is invalid")
       
 
@@ -215,7 +215,7 @@ class TreeSortRunner:
    def create_summary_html(self) -> bool:
 
       # The top-level path 
-      top = safeTrim(os.getenv("KB_TOP"))
+      top = safe_trim(os.getenv("KB_TOP"))
       if len(top) < 1:
          raise Exception("Invalid KB_TOP environment variable in create_summary_html.")
       
@@ -235,7 +235,7 @@ class TreeSortRunner:
 
       try:
          with open(template_path, "r", encoding="utf-8") as file:
-            html_template = safeTrim(file.read())
+            html_template = safe_trim(file.read())
             if len(html_template) < 1:
                raise Exception("Invalid HTML template")
             
@@ -272,39 +272,40 @@ class TreeSortRunner:
 
 
    # Is the JobData instance valid?
-   def is_job_data_valid(self) -> bool:
+   @staticmethod
+   def is_job_data_valid(job_data: JobData) -> bool:
 
       sys.stdout.write("\nIn TreeSortRunner.is_job_data_valid\n")
 
       try:
-         if not self.job_data or not isinstance(self.job_data, JobData):
+         if not job_data or not isinstance(job_data, JobData):
             raise Exception("job_data is empty")
          
          # Inference method
-         if self.job_data.inference_method not in [m.value for m in InferenceMethod]:
-            self.job_data.inference_method = InferenceMethod.Local
+         if job_data.inference_method not in [m.value for m in InferenceMethod]:
+            job_data.inference_method = InferenceMethod.Local
 
          # Validate the job's input_source.
-         self.validate_input_source() 
+         TreeSortRunner.validate_input_source(job_data) 
 
          # Match type and match regex
-         match_regex = safeTrim(self.job_data.match_regex)
-         if self.job_data.match_type == MatchType.RegEx and len(match_regex) < 1:
+         match_regex = safe_trim(job_data.match_regex)
+         if job_data.match_type == MatchType.RegEx and len(match_regex) < 1:
             raise ValueError("The match regular expression was not provided")
 
          # Validate the output path.
-         if not self.job_data.output_path:
+         if not job_data.output_path:
             raise ValueError("The output path is invalid")
 
          # Validate the output filename
-         if not self.job_data.output_file:
+         if not job_data.output_file:
             raise ValueError("The output filename is invalid")
          
          # If output_file has a file extension, remove it (it will be added later, as necessary).
-         self.job_data.output_file = os.path.splitext(self.job_data.output_file)[0]
+         job_data.output_file = os.path.splitext(job_data.output_file)[0]
 
          # Validate the reference segment and provide a default if not provided.
-         refSegment = safeTrim(self.job_data.ref_segment)
+         refSegment = safe_trim(job_data.ref_segment)
          if not refSegment:
             refSegment = DEFAULT_REF_SEGMENT
 
@@ -312,11 +313,11 @@ class TreeSortRunner:
             raise ValueError(f"Invalid reference segment: {refSegment}")
 
          # Reference tree inference
-         if not self.job_data.ref_tree_inference:
-            self.job_data.ref_tree_inference = TreeInference.FastTree
+         if not job_data.ref_tree_inference:
+            job_data.ref_tree_inference = TreeInference.FastTree
 
          # Validate the segments
-         segments = safeTrim(self.job_data.segments)
+         segments = safe_trim(job_data.segments)
          if len(segments) > 0:
             for segment in segments.split(","):
                if not segment.upper() in VALID_SEGMENTS:
@@ -324,7 +325,7 @@ class TreeSortRunner:
          else:
             # TreeSort accepts an empty segments parameter as "all segments", but we are 
             # explicitly populating it here so it can be used when creating the summary file.
-            self.job_data.segments = ",".join(VALID_SEGMENTS)
+            job_data.segments = ",".join(VALID_SEGMENTS)
 
       except Exception as e:
          sys.stderr.write(f"Invalid job data:\n {e}\n")
@@ -341,8 +342,8 @@ class TreeSortRunner:
       # The result status defaults to true.
       result_status = True
 
-      # Initialize the list of reassorted strains (just in case).
-      self.reassorted_strains = []
+      # Initialize the list of results.
+      results = []
 
       # The path of the CSV output file and the annotated tree input file.
       csv_file_path = f"{self.work_directory}/{self.job_data.output_file}.csv"
@@ -353,7 +354,7 @@ class TreeSortRunner:
 
       # Get the path for forester.jar.
       # TODO: this is only temporary...forester.jar will be updated in the container soon (?).
-      top = safeTrim(os.getenv("KB_TOP"))
+      top = safe_trim(os.getenv("KB_TOP"))
       if len(top) < 1:
          raise Exception("Invalid KB_TOP environment variable in parse_annotated_tree.")
    
@@ -381,49 +382,109 @@ class TreeSortRunner:
          print(f"{' '.join(cmd)}\n")
 
          # Run the command
-         result = subprocess.call(cmd, shell=False)
+         cmd_result = subprocess.call(cmd, shell=False)
 
-         if result == 0 and os.path.exists(csv_file_path):
+         if cmd_result == 0 and os.path.exists(csv_file_path):
+            return False
+         
+         # Open the CSV file
+         with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+               
+               is_reassorted = False
+               is_uncertain = False
 
-            with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
-               reader = csv.reader(csvfile)
-               for row in reader:
+               # Get the strain/isolate name.
+               strain = safe_trim(row[0])
+               if len(strain) < 1:
+                  continue
+               
+               # dmd testing 080725
+               PB2 = ""
+               PB1 = ""
+               PA = ""
+               HA = ""
+               NP = ""
+               NA = ""
+               MP = ""
+               NS = ""
+
+               reassortment = ""
+
+               # Look for annotations in columns 1 and 2 (column 0 should have the strain name).
+               annotation1 = row[1] if len(row) > 1 else None
+               annotation2 = row[2] if len(row) > 2 else None
+
+               # Did this strain have reassortment?
+               if annotation1 == "is_reassorted=1":
+                  # This column should have one or more segment names and distances.
+                  if not annotation2:
+                     continue
+                  reassortment = annotation2
+                  is_reassorted = True
+
+               elif annotation2 == "is_reassorted=1":
+                  # This column should have one or more segment names and distances.
+                  if not annotation1:
+                     continue
+                  reassortment = annotation1
+                  is_reassorted = True
+
+               # If reassortment was detected we will determine the affected segment(s).
+               if is_reassorted:
+
+                  # &rea="NA(124)"
                   
-                  reassortment = None
+                  # Determine which segments were reassorted and get each one's distance.
+                  for token in reassortment.replace("rea=", "").strip().split(","):
 
-                  # Look for annotations in columns 1 and 2 (column 0 should have the strain name).
-                  annotation1 = row[1] if len(row) > 1 else None
-                  annotation2 = row[2] if len(row) > 2 else None
+                     if token.startswith("?"):
+                        is_uncertain = True
+                        token = token[1:]
 
-                  # Did this strain have reassortment?
-                  if annotation1 == "is_reassorted=1":
-                     if not annotation2:
-                        continue
-                     reassortment = annotation2
+                     match = re.match(r"([A-Z0-9]+)\((\d+)\)", token)
+                     if match:
+                        name, number = match.groups()
+                        if name == "PB2":
+                           PB2 = number
+                        elif name == "PB1":
+                           PB1 = number
+                        elif name == "PA":
+                           PA = number
+                        elif name == "HA":
+                           HA = number
+                        elif name == "NP":
+                           NP = number
+                        elif name == "NA":
+                           NA = number
+                        elif name == "MP":
+                           MP = number
+                        elif name == "NS":
+                           NS = number
+                  
+               # Update the results
+               results.append({
+                  "strain": strain, 
+                  "is_reassorted": "y" if is_reassorted else "",
+                  "is_uncertain": "y" if is_uncertain else "",
+                  "PB2": PB2,
+                  "PB1": PB1,
+                  "PA": PA,
+                  "HA": HA,
+                  "NP": NP,
+                  "NA": NA,
+                  "MP": MP,
+                  "NS": NS,
+               })
 
-                  elif annotation2 == "is_reassorted=1":
-                     if not annotation1:
-                        continue
-                     reassortment = annotation1
-
-                  else:
-                     continue
-
-                  reassortment = reassortment.replace("rea=", "").strip()
-                  strain = row[0]
-                  if not strain:
-                     continue
-
-                  # Update the list of reassorted strains.
-                  self.reassorted_strains.append({"strain": strain, "reassortment": reassortment})
-
-         if len(self.reassorted_strains) > 0:
+         if len(results) > 0:
 
             # Create the strain reassortments file.
             with open(reassortments_path, "w+", newline="", encoding="utf-8") as result_file:
-               writer = csv.DictWriter(result_file, fieldnames=["strain", "reassortment"])
+               writer = csv.DictWriter(result_file, fieldnames=["strain", "is_reassorted", "is_uncertain", "PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"])
                writer.writeheader()
-               writer.writerows(self.reassorted_strains)
+               writer.writerows(results)
 
          # TODO: Should we delete the CSV file created by forester.jar?
 
@@ -441,7 +502,7 @@ class TreeSortRunner:
 
       try:
          # The input source determines how the input file is provided.
-         input_source = safeTrim(self.job_data.input_source)
+         input_source = safe_trim(self.job_data.input_source)
 
          if input_source == InputSource.FastaFileID.value:
 
@@ -571,7 +632,7 @@ class TreeSortRunner:
          cmd = ["treesort"]
 
          # The clades output path
-         clades_path = safeTrim(self.job_data.clades_path)
+         clades_path = safe_trim(self.job_data.clades_path)
          if len(clades_path) > 0:
             cmd.append(ScriptOption.CladesPath.value)
             cmd.append(clades_path)
@@ -621,65 +682,25 @@ class TreeSortRunner:
 
 
    # Validate the job's input_source.
-   def validate_input_source(self) -> bool:
+   @staticmethod
+   def validate_input_source(job_data: JobData) -> bool:
 
-      if self.job_data.input_source not in [i.value for i in InputSource]:
+      if job_data.input_source not in [i.value for i in InputSource]:
          raise ValueError("job_data.input_source is not a valid input source") 
 
-      if self.job_data.input_source == InputSource.FastaFileID.value:
+      if job_data.input_source == InputSource.FastaFileID.value:
 
          # Make sure an input_fasta_file_id value was provided.
-         if not self.job_data.input_fasta_file_id:
+         if not job_data.input_fasta_file_id:
             raise ValueError("The input FASTA file ID is invalid")
          
-         elif self.job_data.input_fasta_file_id.startswith("ws:"):
+         elif job_data.input_fasta_file_id.startswith("ws:"):
 
             # Remove the "ws:" prefix from the directory name.
-            self.job_data.input_fasta_file_id = self.job_data.input_fasta_file_id[3:]
+            job_data.input_fasta_file_id = job_data.input_fasta_file_id[3:]
       else:
          raise ValueError("The input source is invalid")
       
-      """
-      TODO: The following code might be used in a future release.
-
-      elif self.job_data.input_source == InputSource.FastaGroupID:
-
-         # Make sure an input_fasta_group_id value was provided.
-         if not self.job_data.input_fasta_group_id:
-            raise ValueError("The input FASTA group ID is invalid")
-         
-         elif self.job_data.input_fasta_group_id.startswith("ws:"):
-
-            # Remove the "ws:" prefix from the directory name.
-            self.job_data.input_fasta_group_id = self.job_data.input_fasta_group_id[3:]
-
-         # TODO: Figure out the best way to handle this.
-         raise ValueError("Processing genome groups is not yet supported")
-      
-      elif self.job_data.input_source == InputSource.FastaExistingDataset:
-
-         # If input_source is an existing dataset, make sure an input_fasta_existing_dataset value was provided.
-         if self.job_data.input_source != InputSource.FastaExistingDataset.value:
-            raise ValueError(f"The input source {self.job_data.input_source} is invalid")
-         
-         if not self.job_data.input_fasta_existing_dataset:
-            raise ValueError("A directory with an existing dataset is required")
-         
-         if self.job_data.input_fasta_existing_dataset.startswith("ws:"):
-
-            # Remove the "ws:" prefix from the directory name.
-            self.job_data.input_fasta_existing_dataset = self.job_data.input_fasta_existing_dataset[3:]
-
-         # TODO: Figure out the best way to handle this.
-         raise ValueError("Processing an existing dataset is not yet supported")
-      
-      elif self.job_data.input_source == InputSource.FastaData.value:
-
-         # Make sure an input_fasta_data value was provided.
-         if not self.job_data.input_fasta_data:
-            raise ValueError("The input FASTA data is invalid")
-      """
-
       return True
    
 
@@ -698,21 +719,21 @@ def main(argv=None) -> bool:
    args = parser.parse_args()
 
    # The input directory parameter.
-   input_directory = safeTrim(args.input_directory)
+   input_directory = safe_trim(args.input_directory)
    if len(input_directory) == 0:
       traceback.print_exc(file=sys.stderr)
       sys.stderr.write("Invalid input directory parameter\n")
       sys.exit(-1)
 
    # The job filename parameter.
-   job_filename = safeTrim(args.job_filename)
+   job_filename = safe_trim(args.job_filename)
    if len(job_filename) == 0:
       traceback.print_exc(file=sys.stderr)
       sys.stderr.write("Invalid job filename parameter\n")
       sys.exit(-1)
 
    # The work directory parameter.
-   work_directory = safeTrim(args.work_directory)
+   work_directory = safe_trim(args.work_directory)
    if len(work_directory) == 0:
       traceback.print_exc(file=sys.stderr)
       sys.stderr.write("Invalid work directory parameter\n")
