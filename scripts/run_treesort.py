@@ -384,8 +384,8 @@ class TreeSortRunner:
          # Run the command
          cmd_result = subprocess.call(cmd, shell=False)
 
-         if cmd_result == 0 and os.path.exists(csv_file_path):
-            return False
+         if cmd_result > 0 or not os.path.exists(csv_file_path):
+            raise Exception(f"Forester was unable to generate the CSV file")
          
          # Open the CSV file
          with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
@@ -490,7 +490,7 @@ class TreeSortRunner:
                writer.writerows(results)
 
          else:
-            sys.stdout.write("Unable to process the results CSV file\n")
+            raise Exception("No strains were found in the results CSV file")
 
          # TODO: Should we delete the CSV file created by forester.jar?
 
