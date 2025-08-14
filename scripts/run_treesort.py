@@ -391,8 +391,6 @@ class TreeSortRunner:
          with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
             reader = csv.reader(csvfile)
 
-            sys.stdout.write(f"Opened the reader for {csv_file_path}\n")
-
             for row in reader:
                
                is_reassorted = False
@@ -403,7 +401,7 @@ class TreeSortRunner:
                if len(strain) < 1:
                   continue
                
-               # dmd testing 080725
+               # Maintain a distance value for each segment.
                PB2 = ""
                PB1 = ""
                PA = ""
@@ -469,8 +467,8 @@ class TreeSortRunner:
                # Update the results
                results.append({
                   "strain": strain, 
-                  "is_reassorted": "y" if is_reassorted else "",
-                  "is_uncertain": "y" if is_uncertain else "",
+                  "is_reassorted": "yes" if is_reassorted else "",
+                  "is_uncertain": "yes" if is_uncertain else "",
                   "PB2": PB2,
                   "PB1": PB1,
                   "PA": PA,
@@ -483,16 +481,19 @@ class TreeSortRunner:
 
          if len(results) > 0:
 
+            # Sort the results so that the reassorted strains are at the top.
+            sorted_results = sorted(results, key=lambda r: r["is_reassorted"], reverse=True)
+
             # Create the strain reassortments file.
             with open(reassortments_path, "w+", newline="", encoding="utf-8") as result_file:
                writer = csv.DictWriter(result_file, fieldnames=["strain", "is_reassorted", "is_uncertain", "PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"])
                writer.writeheader()
-               writer.writerows(results)
+               writer.writerows(sorted_results)
 
          else:
             raise Exception("No strains were found in the results CSV file")
 
-         # TODO: Should we delete the CSV file created by forester.jar?
+         # TODO: Delete the CSV file created by forester.jar
 
       except Exception as e:
          sys.stderr.write(f"Error in TreeSort:\n {e}\n")
