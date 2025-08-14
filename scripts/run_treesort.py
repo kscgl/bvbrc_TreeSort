@@ -250,7 +250,7 @@ class TreeSortRunner:
          "{{reassortments_filename}}": REASSORTMENTS_FILE_NAME,
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
          "{{segments}}": self.job_data.segments,
-         "{{workspace_folder}}": f"workspace/{self.job_data.output_path}/.{self.job_data.output_file}"
+         "{{workspace_folder}}": "."  #f"workspace/{self.job_data.output_path}/.{self.job_data.output_file}"
       }
 
       # Replace all JavaScript variable strings in the template text.
@@ -349,7 +349,7 @@ class TreeSortRunner:
       csv_file_path = f"{self.work_directory}/{self.job_data.output_file}.csv"
       tree_file_path = f"{self.work_directory}/{self.job_data.output_file}{TREE_FILE_EXTENSION}"
 
-      # The path of the strain reassortemnts CSV file we will create.
+      # The path of the strain reassortments CSV file we will create.
       reassortments_path = f"{self.work_directory}/{REASSORTMENTS_FILE_NAME}"
 
       # Get the path for forester.jar.
