@@ -390,6 +390,9 @@ class TreeSortRunner:
          # Open the CSV file
          with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
             reader = csv.reader(csvfile)
+
+            sys.stdout.write(f"Opened the reader for {csv_file_path}\n")
+
             for row in reader:
                
                is_reassorted = False
@@ -485,6 +488,9 @@ class TreeSortRunner:
                writer = csv.DictWriter(result_file, fieldnames=["strain", "is_reassorted", "is_uncertain", "PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"])
                writer.writeheader()
                writer.writerows(results)
+
+         else:
+            sys.stdout.write("Unable to process the results CSV file\n")
 
          # TODO: Should we delete the CSV file created by forester.jar?
 
