@@ -391,6 +391,8 @@ class TreeSortRunner:
          with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
             reader = csv.reader(csvfile)
 
+            sys.stdout.write("\nReading the results CSV file.\n")
+
             for row in reader:
                
                is_reassorted = False
@@ -481,6 +483,8 @@ class TreeSortRunner:
 
          if len(results) > 0:
 
+            sys.stdout.write(f"Writing transformed reassortment data to {reassortments_path}\n\n")
+
             # Sort the results so that the reassorted strains are at the top.
             sorted_results = sorted(results, key=lambda r: r["is_reassorted"], reverse=True)
 
@@ -491,7 +495,7 @@ class TreeSortRunner:
                writer.writerows(sorted_results)
 
          else:
-            raise Exception("No strains were found in the results CSV file")
+            sys.stderr.write("No strains were found in the CSV results file")
 
          # TODO: Delete the CSV file created by forester.jar
 
