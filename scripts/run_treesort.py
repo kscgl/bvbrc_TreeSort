@@ -250,7 +250,7 @@ class TreeSortRunner:
          "{{reassortments_filename}}": REASSORTMENTS_FILE_NAME,
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
          "{{segments}}": self.job_data.segments,
-         "{{workspace_folder}}": "."  #f"workspace/{self.job_data.output_path}/.{self.job_data.output_file}"
+         "{{workspace_folder}}": ""  #f"workspace/{self.job_data.output_path}/.{self.job_data.output_file}"
       }
 
       # Replace all JavaScript variable strings in the template text.
