@@ -139,10 +139,10 @@
          }
 
          // Add a link to the output file (the annotated tree file).
-         outputFileEl.innerHTML = `<a href="${workspaceFolder}/${resultFilename}" target="_blank">${resultFilename}</a>`;
+         outputFileEl.innerHTML = `<a href="${workspaceFolder}${resultFilename}" target="_blank">${resultFilename}</a>`;
          
          // Add a link to the reassortments summary CSV file.
-         reassortmentsEl.innerHTML = `<a href="${workspaceFolder}/${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
+         reassortmentsEl.innerHTML = `<a href="${workspaceFolder}${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
 
          if (!segments || segments.length < 1) {
             resultsBySegmentEl.innerHTML = "No segments were included in the analysis";
@@ -165,7 +165,7 @@
                // Alternate row classes
                const rowClass = index_ % 2 ? "treesort--even" : "treesort--odd";
 
-               const fileURL = `${workspaceFolder}/${segment_}${file_.path}`;
+               const fileURL = `${workspaceFolder}${segment_}${file_.path}`;
 
                // Create a row for this file.
                rowsHTML += `<tr class="${rowClass}">
