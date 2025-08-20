@@ -686,7 +686,7 @@ class TreeSortRunner:
          # Run the command
          result = subprocess.run(cmd, capture_output=True, text=True)
 
-         with open(f"{self.job_data.output_path}/{STDOUT_FILENAME}", "w", encoding="utf-8") as std_file:
+         with open(f"{self.work_directory}/{STDOUT_FILENAME}", "w", encoding="utf-8") as std_file:
             # Write to stdout and file.
             sys.stdout.write(result.stdout)
             std_file.write(result.stdout)
