@@ -43,6 +43,9 @@ RESULT_DIRECTORY_SUFFIX = "-input.fasta.aln.treetime"
 # The result files created by TreeSort for every segment.
 RESULT_FILENAMES = [ "outliers.tsv", "root_to_tip_regression.pdf", "rtt.csv" ]
 
+# The name of the file we use to capture stdout.
+STDOUT_FILENAME = "stdout.txt"
+
 # The name of the summary HTML file we will generate.
 SUMMARY_FILENAME = "TreeSort_analysis_results.html"
 
@@ -681,13 +684,29 @@ class TreeSortRunner:
          print(f"{' '.join(cmd)}\n")
 
          # Run the command
-         result = subprocess.call(cmd, shell=False)
+         result = subprocess.run(cmd, capture_output=True, text=True)
+
+         with open(f"{self.job_data.output_path}/{STDOUT_FILENAME}", "w", encoding="utf-8") as std_file:
+            # Write to stdout and file.
+            sys.stdout.write(result.stdout)
+            std_file.write(result.stdout)
+            
+            if result.stderr:
+               sys.stderr.write(result.stderr)
+
          if result == 0:
             result_status = True
-
-      except ValueError as e:
+                  
+      except Exception as e:
+         sys.stderr.write(f"Error in TreeSort:\n {type(e).__name__}: {e}\n")
+         return False
+      
+      """except ValueError as e:
          sys.stderr.write(f"Error in TreeSort:\n {e}\n")
          return False
+      except FileNotFoundError as fe:
+         sys.stderr.write(f"Error in TreeSort:\n {fe}\n")
+         return False"""
          
       return result_status
 
