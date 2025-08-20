@@ -469,8 +469,8 @@ class TreeSortRunner:
                # Update the results
                results.append({
                   "strain": strain, 
-                  "is_reassorted": "yes" if is_reassorted else "",
-                  "is_uncertain": "yes" if is_uncertain else "",
+                  "is_reassorted": "Y" if is_reassorted else "",
+                  "is_uncertain": "Y" if is_uncertain else "",
                   "PB2": PB2,
                   "PB1": PB1,
                   "PA": PA,
@@ -497,7 +497,7 @@ class TreeSortRunner:
          else:
             sys.stderr.write("No strains were found in the CSV results file")
 
-         # TODO: Delete the CSV file created by forester.jar
+         # TODO: Delete the CSV file created by forester.jar?
 
       except Exception as e:
          sys.stderr.write(f"Error in TreeSort:\n {e}\n")
