@@ -128,40 +128,46 @@
 
          // Get a reference to the output file element.
          const outputFileEl = document.getElementById("treesort_output_file");
-         if (!outputFileEl) { throw new Error("Invalid output file element"); }
+         if (outputFileEl) { 
+            // Add a link to the output file (the annotated tree file).
+            outputFileEl.innerHTML = `<a href="${workspaceFolder}${resultFilename}" target="_blank">${resultFilename}</a>`;
+         }
 
          // Get a reference to the "reassortments file" element.
          const reassortmentsEl = document.getElementById("treesort_reassortments_file");
-         if (!reassortmentsEl) { throw new Error("Invalid reassortments file element"); }
-
-         // Get a reference to the "results by segment" element.
-         const resultsBySegmentEl = document.getElementById("treesort_segment_files");
-         if (!resultsBySegmentEl) { throw new Error("Invalid segment files element"); }
+         if (reassortmentsEl) { 
+            // Add a link to the reassortments summary CSV file.
+            reassortmentsEl.innerHTML = `<a href="${workspaceFolder}${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
+         }
 
          // Get a reference to the summary element.
          const summaryEl = document.getElementById("treesort_summary");
-         if (!summaryEl) { throw new Error("Invalid summary element"); }
+         if (summaryEl) { 
+            // Populate the TreeSort summary HTML.
+            summaryEl.innerHTML = treesortSummary;
+         }
 
+         // Populate the section with segment-specific results.
+         populateResultsBySegment();
+
+         // TODO: Do something with the dataset summary.
+         console.log("dataset summary = ", datasetSummary)
+      }
+
+
+      // Populate the section with segment-specific results.
+      function populateResultsBySegment() {
+
+         // Get a reference to the "results by segment" element.
+         const resultsBySegmentEl = document.getElementById("treesort_segment_files");
+         if (!resultsBySegmentEl) { return; }
+            
+         // Was segment data provided?
          if (!segments || segments.length < 1) { 
-            // Display an error message
             resultsBySegmentEl.innerHTML = "No segments were analyzed";
             return;
          }
-
-         // Add a link to the output file (the annotated tree file).
-         outputFileEl.innerHTML = `<a href="${workspaceFolder}${resultFilename}" target="_blank">${resultFilename}</a>`;
          
-         // Add a link to the reassortments summary CSV file.
-         reassortmentsEl.innerHTML = `<a href="${workspaceFolder}${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
-
-         // Populate the summary HTML.
-         summaryEl.innerHTML = summaryHTML;
-
-         if (!segments || segments.length < 1) {
-            resultsBySegmentEl.innerHTML = "No segments were included in the analysis";
-            return;
-         }
-
          let html = "";
 
          // Iterate over all segments that were included in the analysis.
@@ -200,9 +206,6 @@
          })
 
          resultsBySegmentEl.innerHTML = html;
-
-         // TODO: Do something with the dataset summary.
-         console.log("dataset summary = ", datasetSummary)
       }
 
       window.addEventListener('load', function() {
