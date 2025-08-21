@@ -6,6 +6,8 @@
 # Example usage: ./prepare_treesort_dataset.sh --segments "HA,NA" segments.fasta HA myoutdir
 # Example with default segments:  ./prepare_treesort_dataset.sh segments.fasta HA myoutdir
 
+echo -e "Starting prepare_treesort_dataset.sh\n"
+
 # These are the default segment names
 declare -a segments=("PB2" "PB1" "PA" "HA" "NP" "NA" "MP" "NS")
 FAST=0
@@ -134,6 +136,7 @@ fi
 echo -e "Rooting trees with TreeTime...\n"
 for seg in "${found_segments[@]}"
 do
+	echo -e "Running TreeTime with segment ${seg}\n"
 	treetime-root "${outdir}/${seg}-${name}.tre" "${outdir}/${seg}-${name}.aln" &
 done
 wait
@@ -159,7 +162,10 @@ do
 done
 echo -e "The descriptor file was written to ${descriptor}\n"
 
+# dmd 08/21/25: Does TreeSort actually use this?
 # Send found_segments to stdout so it can be retrieved by run_treesort.py.
 echo -e "FOUND_SEGMENTS: $(IFS=,; echo "${found_segments[*]}")\n"
+
+echo -e "Completed prepare_treesort_dataset.sh\n"
 
 exit 0

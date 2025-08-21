@@ -43,8 +43,9 @@ RESULT_DIRECTORY_SUFFIX = "-input.fasta.aln.treetime"
 # The result files created by TreeSort for every segment.
 RESULT_FILENAMES = [ "outliers.tsv", "root_to_tip_regression.pdf", "rtt.csv" ]
 
-# The name of the file we use to capture stdout.
+# The names of the files we use to capture stdout and stderr.
 STDOUT_FILENAME = "stdout.txt"
+STDERR_FILENAME = "stderr.txt"
 
 # The name of the summary HTML file we will generate.
 SUMMARY_FILENAME = "TreeSort_analysis_results.html"
@@ -621,7 +622,7 @@ class TreeSortRunner:
                if line.startswith("FOUND_SEGMENTS:"):
                   self.job_data.segments = line.replace("FOUND_SEGMENTS:", "").strip()
 
-                  print(f"segments has been updated to {self.job_data.segments}")
+                  print(f"job_data.segments has been updated to {self.job_data.segments}")
 
                else:
                   # Write the script's stdout to run_treesort.py's stdout.
@@ -686,28 +687,27 @@ class TreeSortRunner:
          # Run the command
          result = subprocess.run(cmd, capture_output=True, text=True)
 
-         with open(f"{self.work_directory}/{STDOUT_FILENAME}", "w", encoding="utf-8") as std_file:
+         # Write stdout and stderr to files in the work directory.
+         with open(f"{self.work_directory}/{STDOUT_FILENAME}", "w", encoding="utf-8") as stdout_file, \
+            open(f"{self.work_directory}/{STDERR_FILENAME}", "w", encoding="utf-8") as stderr_file:
+
+            line = result.stdout.strip()
+
             # Write to stdout and file.
-            sys.stdout.write(result.stdout)
-            std_file.write(result.stdout)
+            sys.stdout.write(line)
+            stdout_file.write(line)
             
             if result.stderr:
                sys.stderr.write(result.stderr)
+               stderr_file.write(result.stderr)
 
-         if result == 0:
+         if result.returncode == 0:
             result_status = True
                   
       except Exception as e:
          sys.stderr.write(f"Error in TreeSort:\n {type(e).__name__}: {e}\n")
          return False
       
-      """except ValueError as e:
-         sys.stderr.write(f"Error in TreeSort:\n {e}\n")
-         return False
-      except FileNotFoundError as fe:
-         sys.stderr.write(f"Error in TreeSort:\n {fe}\n")
-         return False"""
-         
       return result_status
 
 
