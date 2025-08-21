@@ -154,7 +154,25 @@ class JobData:
    ref_segment: str
    ref_tree_inference: TreeInference
    segments: Optional[str]
-    
+
+
+# A collection of result data to include in the analysis HTML file.
+class Results:
+
+   # The prepare_treesort_dataset script's stdout as text and formatted HTML.
+   dataset_stdout: str
+   dataset_summary_html: str
+   
+   # TreeSort's stdout as text and formatted HTML.
+   treesort_stdout: str
+   treesort_summary_html: str
+
+   def __init__(self):
+      self.dataset_stdout = ""
+      self.dataset_summary_html = ""
+      self.treesort_stdout = ""
+      self.treesort_summary_html = ""
+
 
 # The class responsible for processing input parameters, preparing the input file, and 
 # running the TreeSort application.
@@ -177,6 +195,9 @@ class TreeSortRunner:
 
    # Reassortment data generated in parse_annotated_tree.
    reassorted_strains = []
+
+   # A collection of result data to include in the analysis HTML file.
+   results: Results
 
    # The directory where the scripts will be run.
    work_directory: str
@@ -214,6 +235,10 @@ class TreeSortRunner:
       if not TreeSortRunner.is_job_data_valid(self.job_data):
          raise ValueError("Job data in the constructor is invalid")
       
+      # Initialize the results object.
+      self.results = Results()
+
+
 
    # Create the summary report file.
    def create_summary_html(self) -> bool:
@@ -249,12 +274,17 @@ class TreeSortRunner:
       except Exception as e:
          raise Exception(f"An error occurred: {e}")
 
+      # Format the stdout from prepare_treesort_dataset and TreeSort as HTML.
+      self.format_results_stdout()
+
       # The values of the JavaScript variables in the template.
       js_variables = {
+         "{{dataset_summary}}": self.results.dataset_summary_html,
          "{{reassortments_filename}}": REASSORTMENTS_FILE_NAME,
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
          "{{segments}}": self.job_data.segments,
-         "{{workspace_folder}}": "" #f"workspace/{self.job_data.output_path}/.{self.job_data.output_file}"
+         "{{treesort_summary}}": self.results.treesort_summary_html,
+         "{{workspace_folder}}": ""
       }
 
       # Replace all JavaScript variable strings in the template text.
@@ -273,6 +303,37 @@ class TreeSortRunner:
          raise IOError(f"Error creating the summary file:\n {e}\n")
 
       return True
+
+
+   # Format the stdout from prepare_treesort_dataset and TreeSort as HTML.
+   def format_results_stdout(self):
+
+      if not self.results:
+         raise Exception("The results object is invalid")
+      
+      # Format TreeSort's stdout as an HTML list.
+      summary = safe_trim(self.results.treesort_stdout)
+      if len(summary) > 0:
+         
+         list_items = ""
+
+         for line in summary.splitlines():
+
+            line = safe_trim(line)
+            if "/tmp/" in line:
+               continue
+
+            list_items += f"<li>{line}</li>"
+
+         if len(list_items) > 0:
+            self.results.treesort_summary_html = f"<ul>{list_items}</ul>"
+
+      # Format prepare_treesort_dataset's stdout as HTML.
+      summary = safe_trim(self.results.dataset_stdout)
+      if len(summary) > 0:
+
+         # TEST
+         self.results.dataset_summary_html = summary
 
 
    # Is the JobData instance valid?
@@ -616,19 +677,24 @@ class TreeSortRunner:
             
             result_status = True
 
-            # Iterate over the lines in the result's stdout to 1) look for the segments 
-            # that were found, and 2) to echo messages to stdout.
+            # Iterate over lines in the result's stdout to 1) look for the segments 
+            # that were found, 2) parse TreeTime data by segment, and 3) to echo messages 
+            # to stdout.
             for line in result.stdout.strip().splitlines():
+
                if line.startswith("FOUND_SEGMENTS:"):
                   self.job_data.segments = line.replace("FOUND_SEGMENTS:", "").strip()
 
                   print(f"job_data.segments has been updated to {self.job_data.segments}")
 
+               elif line.startswith("TREETIME_SEGMENT"):
+                  self.results.dataset_stdout += f"{line}\n"
+
                else:
                   # Write the script's stdout to run_treesort.py's stdout.
                   sys.stdout.write(f"{line}\n")
 
-      except ValueError as e:
+      except Exception as e:
          sys.stderr.write(f"Error preparing dataset:\n {e}\n")
          return False
          
@@ -687,6 +753,10 @@ class TreeSortRunner:
          # Run the command
          result = subprocess.run(cmd, capture_output=True, text=True)
 
+         # Update the results object with TreeSort's stdout.
+         self.results.treesort_stdout = result.stdout
+
+         """
          # Write stdout and stderr to files in the work directory.
          with open(f"{self.work_directory}/{STDOUT_FILENAME}", "w", encoding="utf-8") as stdout_file, \
             open(f"{self.work_directory}/{STDERR_FILENAME}", "w", encoding="utf-8") as stderr_file:
@@ -700,6 +770,7 @@ class TreeSortRunner:
             if result.stderr:
                sys.stderr.write(result.stderr)
                stderr_file.write(result.stderr)
+         """
 
          if result.returncode == 0:
             result_status = True

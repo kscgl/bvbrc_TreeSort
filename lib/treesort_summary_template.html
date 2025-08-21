@@ -76,20 +76,24 @@
 
       <h2 class="treesort--section-title">Results</h2>
 
+      <h3>Summary</h3>
+      <div class="treesort--output-file-panel">
+         TreeSort provided the following summary about its parameters and analysis:
+         <div id="treesort_summary"></div>
+      </div>
+
       <h3>Annotated tree file</h3>
       <div class="treesort--output-file-panel">
-      The primary result of the analysis is an annotated tree file: <span id="treesort_output_file"></span>. Information about reassorted segments
-      is displayed in the tree visualization at the associated nodes (strains).
+         The primary result of the analysis is an annotated tree file: <span id="treesort_output_file"></span>. Information about reassorted segments
+         is displayed in the tree visualization at the associated nodes (strains).
       </div>
 
-      reassortmentsFilename
       <h3>Reassortment summary</h3>
       <div class="treesort--output-file-panel">
-      The annotated tree file includes reassortment information for every node, but this is only useful for visualization. The TreeSort service 
-      parses the annotations in the tree file and generates a downloadable summary of all strains where reassortment is suspected: 
-      <span id="treesort_reassortments_file"></span>.
+         The annotated tree file includes reassortment information for every node, but this is only useful for visualization. The TreeSort service 
+         parses the annotations in the tree file and generates a downloadable summary of all strains where reassortment is suspected: 
+         <span id="treesort_reassortments_file"></span>.
       </div>
-
 
       <h3>Segment-specific files</h3>
       <div id="treesort_segment_files"></div>
@@ -98,9 +102,11 @@
    <script type="text/javascript">
 
       // Variables populated by run_treesort.py.
+      const datasetSummary = "{{dataset_summary}}";
       const reassortmentsFilename = "{{reassortments_filename}}";
       const resultFilename = "{{result_filename}}";
       const segmentList = "{{segments}}";
+      const treesortSummary = "{{treesort_summary}}";
       const workspaceFolder = "{{workspace_folder}}";
 
       // Split the segment list into an array.
@@ -132,7 +138,11 @@
          const resultsBySegmentEl = document.getElementById("treesort_segment_files");
          if (!resultsBySegmentEl) { throw new Error("Invalid segment files element"); }
 
-         if (segments.length < 1) { 
+         // Get a reference to the summary element.
+         const summaryEl = document.getElementById("treesort_summary");
+         if (!summaryEl) { throw new Error("Invalid summary element"); }
+
+         if (!segments || segments.length < 1) { 
             // Display an error message
             resultsBySegmentEl.innerHTML = "No segments were analyzed";
             return;
@@ -143,6 +153,9 @@
          
          // Add a link to the reassortments summary CSV file.
          reassortmentsEl.innerHTML = `<a href="${workspaceFolder}${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
+
+         // Populate the summary HTML.
+         summaryEl.innerHTML = summaryHTML;
 
          if (!segments || segments.length < 1) {
             resultsBySegmentEl.innerHTML = "No segments were included in the analysis";
@@ -187,6 +200,9 @@
          })
 
          resultsBySegmentEl.innerHTML = html;
+
+         // TODO: Do something with the dataset summary.
+         console.log("dataset summary = ", datasetSummary)
       }
 
       window.addEventListener('load', function() {

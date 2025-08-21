@@ -136,8 +136,10 @@ fi
 echo -e "Rooting trees with TreeTime...\n"
 for seg in "${found_segments[@]}"
 do
-	echo -e "Running TreeTime with segment ${seg}\n"
-	treetime-root "${outdir}/${seg}-${name}.tre" "${outdir}/${seg}-${name}.aln" &
+	(
+	echo -e "TREETIME_SEGMENT: ${seg}\n"
+	treetime-root "${outdir}/${seg}-${name}.tre" "${outdir}/${seg}-${name}.aln"
+	) &
 done
 wait
 
@@ -162,7 +164,6 @@ do
 done
 echo -e "The descriptor file was written to ${descriptor}\n"
 
-# dmd 08/21/25: Does TreeSort actually use this?
 # Send found_segments to stdout so it can be retrieved by run_treesort.py.
 echo -e "FOUND_SEGMENTS: $(IFS=,; echo "${found_segments[*]}")\n"
 
