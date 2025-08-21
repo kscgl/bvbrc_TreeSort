@@ -279,7 +279,7 @@ class TreeSortRunner:
 
       # The values of the JavaScript variables in the template.
       js_variables = {
-         "{{dataset_summary}}": self.results.dataset_summary_html,
+         "{{dataset_summary}}": "TODO", #self.results.dataset_summary_html,
          "{{reassortments_filename}}": REASSORTMENTS_FILE_NAME,
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
          "{{segments}}": self.job_data.segments,
@@ -334,6 +334,7 @@ class TreeSortRunner:
 
          # TEST
          self.results.dataset_summary_html = summary
+         sys.stdout.write(f"\nThe dataset summary is {summary}\n")
 
 
    # Is the JobData instance valid?
@@ -689,6 +690,7 @@ class TreeSortRunner:
 
                elif line.startswith("TREETIME_SEGMENT"):
                   self.results.dataset_stdout += f"{line}\n"
+                  sys.stdout.write(f"{line}\n")
 
                else:
                   # Write the script's stdout to run_treesort.py's stdout.
