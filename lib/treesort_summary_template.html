@@ -100,9 +100,9 @@
    <script type="text/javascript">
 
       // Variables populated by run_treesort.py.
-      const datasetSummary = "{{dataset_summary}}";
       const reassortmentsFilename = "{{reassortments_filename}}";
       const resultFilename = "{{result_filename}}";
+      const resultsJSON = "{{results_json}}";
       const segmentList = "{{segments}}";
       const treesortSummary = "{{treesort_summary}}";
       const workspaceFolder = "{{workspace_folder}}";
@@ -148,8 +148,11 @@
          // Populate the section with segment-specific results.
          populateResultsBySegment();
 
-         // TODO: Do something with the dataset summary.
-         console.log("dataset summary = ", datasetSummary)
+         if (!!resultsJSON) {
+
+            const json = JSON.parse(resultsJSON);
+            console.log("results_json = ", json)
+         }
       }
 
 

@@ -137,10 +137,10 @@ echo -e "Rooting trees with TreeTime...\n"
 for seg in "${found_segments[@]}"
 do
    # Create a segment-specific text file to store treetime-root's stdout.
-   echo -e "SEGMENT: $(seg)\n" > "${outdir}/$(seg)-treetime-root-output.txt"
+   echo -e "SEGMENT: ${seg}\n" > "${outdir}/${seg}-treetime-stdout.txt"
 
    # Run treetime-root and use tee to append to the segment-specific stdout file.
-	treetime-root "${outdir}/${seg}-${name}.tre" "${outdir}/${seg}-${name}.aln" | tee -a "${outdir}/$(seg)-treetime-root-output.txt" &
+	treetime-root "${outdir}/${seg}-${name}.tre" "${outdir}/${seg}-${name}.aln" | tee -a "${outdir}/${seg}-treetime-stdout.txt" &
 done
 wait
 
