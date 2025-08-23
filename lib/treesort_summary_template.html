@@ -121,6 +121,25 @@
          { label: "Root to tip data (???)", path: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data (???)"}
       ]
 
+
+      // Get the segment summary from the JSON.
+      function getSegmentSummary(segment_) {
+
+         if (!resultsJSON || !resultsJSON.segments) { return ""; }
+
+         const messages = resultsJSON.segments[segment_];
+         if (!Array.isArray(messages) || messages.length < 1) { return ""; }
+
+         let list = "";
+
+         messages.forEach((message_) => {
+            list += `<li>${message_}</li>`;
+         })
+            
+         return `<ul>${list}</ul>`;
+      }
+
+
       // Update placeholder text on the page.
       function populatePage() {
 
@@ -147,9 +166,6 @@
 
          // Populate the section with segment-specific results.
          populateResultsBySegment();
-
-         console.log("resultsJSON = ", resultsJSON)
-
       }
 
 
@@ -177,6 +193,23 @@
             segment_ = segment_.trim();
             if (!segment_ || segment_.length < 1) { return; }
 
+            // Try to get the segment summary from the JSON.
+            const summaryHTML = getSegmentSummary(segment_);
+            if (summaryHTML.length < 1) {
+               html += `<div class="no-results">No data is available</div>`;
+               return;
+            }
+
+            // Display the root-to-tip regression summary and PDF.
+            html += `<h3 class="treesort--segment-title">Root-to-tree regression</h3>
+               <div class="treesort--output-file-panel">
+                  ${summaryHTML}
+                  <div style="width: 640px; height: 480px;">
+                     <embed src="${segment_}-input.fasta.aln.treetime/root_to_tip_regression.pdf" type="application/pdf" width="100%" height="100%" />
+                  </div>
+               </div>`;
+            
+            // Create table rows for the linked files.
             segmentFiles.forEach((file_, index_) => {
 
                // Alternate row classes
@@ -201,10 +234,6 @@
                   </thead>
                   <tbody>${rowsHTML}</tbody>
                </table>`;
-
-            html += `<div style="width: 640px; height: 480px;">
-               <embed src="${segment_}-input.fasta.aln.treetime/root_to_tip_regression.pdf" type="application/pdf" width="100%" height="100%" />
-            </div>`;
          })
 
          resultsBySegmentEl.innerHTML = html;
