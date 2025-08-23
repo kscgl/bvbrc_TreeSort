@@ -342,28 +342,43 @@ class TreeSortRunner:
       self.process_treetime_stdout_files()
 
 
-      segment_json = ""
+      # Generate JSON for segment_data in the results object.
+      segments_json = ""
 
       # Generate JSON for the segment data.
       for segment in self.results.segment_data.keys():
+
+         # JSON for this segment's data.
+         segment_json = ""
 
          segment_lines = self.results.segment_data[segment]
          if segment_lines and len(segment_lines) > 0:
             
             for line in segment_lines:
-               segment_json += f"\"{line}\","
 
-            segment_json = f"\"{segment}\":[{segment_json}],"
+               if len(segment_json) > 0:
+                  segment_json += ","
+
+               segment_json += f"\"{line}\""
+
+            if len(segments_json) > 0:
+               segments_json += ","
+
+            segments_json += f"\"{segment}\":[{segment_json}]"
          
-
       # Generate a JSON array for the treesort list.
       summary_array = ""
       if self.results.treesort_list:
          for line in self.results.treesort_list:
-            summary_array += f"\"{line}\","
+            if len(summary_array) > 0:
+               summary_array += ","
+            summary_array += f"\"{line}\""
 
       # Assemble the components as JSON.
-      self.results.json = "{" + f"\"segments\":{segment_json}, \"summary\":[{summary_array}]" + "}"
+      self.results.json = f"{{\"segments\":{{{segments_json}}}, \"summary\":[{summary_array}]}}"
+
+      # TESTING
+      sys.stdout.write(f"\n\n{self.results.json}\n\n")
 
       
    # Is the JobData instance valid?
