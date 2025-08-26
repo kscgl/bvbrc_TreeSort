@@ -26,7 +26,7 @@
          margin-bottom: 2.0rem;
       }
 
-      .treesort--output-file-panel {
+      .treesort--section-body {
          margin-bottom: 2.0rem;
       }
 
@@ -69,25 +69,38 @@
       <h1 class="treesort--title">TreeSort analysis results</h1>
 
       <h2 class="treesort--section-title">About the results</h2>
-      <div class="treesort--background-info">The TreeSort tool infers both recent and ancestral reassortment events along the branches of a phylogenetic 
-      tree of a fixed genomic segment. It uses a statistical hypothesis testing framework to identify branches where reassortment with 
-      other segments has occurred and reports these events.
+      <div class="treesort--background-info">TreeSort can accurately identify recent and ancestral reassortment events on datasets with thousands of genomes. 
+         Using the phylogeny of a selected segment as a reference and information from other gene segments, TreeSort finds the branches in the phylogeny 
+         where reassortment is most likely to have occurred, reports the particular gene segments involved in reassortment, and lists their differences from 
+         prior gene pairings.
+      </div>
+
+      <h3>Root-to-tip regression</h3>
+      <div class="treesort--section-body">
+         "Root-to-tip" regression data provides insight into the quality of the phylogenetic tree that was generated and includes several indicators:
+         <ul>
+            <li>The <b>R<sup>2</sup></b> value indicates the fraction of variation in root-to-tip distance explained by the sampling times. Higher values 
+               correspond to more clock-like behavior (max 1.0).</li>
+            <li>The <b>rate</b> is the slope of the best fit of the date to the root-to-tip distance and provides an estimate of the substitution rate. Note that
+               the rate needs to be positive, as negative rates suggest an inappropriate root.</li>
+            <li>The estimated rate and tree correspond to a <b>root date</b></li>
+         </ul>
       </div>
 
       <h2 class="treesort--section-title">Summary</h2>
-      <div class="treesort--output-file-panel">
+      <div class="treesort--section-body">
          TreeSort provided the following summary of its parameters and analysis:
          <div id="treesort_summary"></div>
       </div>
 
       <h2 class="treesort--section-title">Annotated tree file</h2>
-      <div class="treesort--output-file-panel">
+      <div class="treesort--section-body">
          The primary result of the analysis is an annotated tree file: <span id="treesort_output_file"></span>. Information about reassorted segments
-         is displayed in the tree visualization at the associated nodes (strains).
+         is displayed at the associated nodes (strains) in the tree visualization.
       </div>
 
       <h2 class="treesort--section-title">Reassortment summary</h2>
-      <div class="treesort--output-file-panel">
+      <div class="treesort--section-body">
          The annotated tree file includes reassortment information for every node, but this is only useful for visualization. The TreeSort service 
          parses the annotations in the tree file and generates a downloadable summary of all strains where reassortment is suspected: 
          <span id="treesort_reassortments_file"></span>.
@@ -102,7 +115,7 @@
       // Variables populated by run_treesort.py.
       const reassortmentsFilename = "{{reassortments_filename}}";
       const resultFilename = "{{result_filename}}";
-      const resultsJSON = {{results_json}};
+      const resultsJSON = "{{results_json}}";
       const segmentList = "{{segments}}";
       const treesortSummary = "{{treesort_summary}}";
       const workspaceFolder = "{{workspace_folder}}";
@@ -118,7 +131,7 @@
 
          { label: "Outliers", path: "-input.fasta.aln.treetime/outliers.tsv", description: "A table of outlier data"},
          { label: "Root to tip regression", path: "-input.fasta.aln.treetime/root_to_tip_regression.pdf", description: "A visualization of root-to-tip regression"},
-         { label: "Root to tip data (???)", path: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data (???)"}
+         { label: "Root to tip data", path: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data in CSV format"}
       ]
 
 
@@ -201,8 +214,8 @@
             }
 
             // Display the root-to-tip regression summary and PDF.
-            html += `<h3 class="treesort--segment-title">Root-to-tree regression</h3>
-               <div class="treesort--output-file-panel">
+            html += `<h3 class="treesort--segment-title">${segment_} root-to-tip (RTT) regression</h3>
+               <div class="treesort--section-body">
                   ${summaryHTML}
                   <div style="width: 640px; height: 480px;">
                      <embed src="${segment_}-input.fasta.aln.treetime/root_to_tip_regression.pdf" type="application/pdf" width="100%" height="100%" />

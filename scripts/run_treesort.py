@@ -5,6 +5,7 @@ import csv
 from dataclasses import dataclass
 from enum import Enum
 import json
+from math import ceil, floor, fmod, trunc
 import os
 import re
 import subprocess
@@ -300,7 +301,7 @@ class TreeSortRunner:
       js_variables = {
          "{{reassortments_filename}}": REASSORTMENTS_FILE_NAME,
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
-         "{{results_json}}": self.results.json,
+         "\"{{results_json}}\"": self.results.json,
          "{{segments}}": self.job_data.segments,
          "{{treesort_summary}}": treesort_summary,
          "{{workspace_folder}}": ""
@@ -381,6 +382,46 @@ class TreeSortRunner:
       sys.stdout.write(f"\n\n{self.results.json}\n\n")
 
       
+   # Convert the root date formatted as a decimal to a standard MM/DD/YYYY.
+   def format_root_date(self, str_decimal: str, year: str):
+
+      """ 
+      Here's how TreeSort converts a date into a decimal format:
+      
+      decimal_date = ((date.month - 1) * 30 + date.day) / 365.0  + date.year
+      
+      """
+
+      result_date = "invalid"
+
+      if not str_decimal or len(str_decimal) < 1 or not year or len(year) < 1:
+         return result_date
+
+      f_decimal = floor((float(str_decimal) * 365.0)+ 0.5)
+      
+      try:
+         # Divide by 365 and "round half up".
+         f_decimal = floor((float(str_decimal) * 365.0) + 0.5)
+      
+         # Calculate the month and make sure it has 2 digits.
+         month = str(trunc(f_decimal / 30) + 1)
+         if len(month) == 1:
+            month = f"0{month}"
+
+         # Calculate the day and make sure it has 2 digits.
+         day = str(ceil(fmod(f_decimal, 30)))
+         if len(day) == 1:
+            day = f"0{day}"
+
+         result_date = f"{month}/{day}/{year}"
+
+      except Exception as e:
+         sys.stderr.write(f"Unable to format a date in decimal format:\n {e}\n")
+         result_date = "invalid"
+      
+      return result_date
+   
+
    # Is the JobData instance valid?
    @staticmethod
    def is_job_data_valid(job_data: JobData) -> bool:
@@ -698,16 +739,25 @@ class TreeSortRunner:
       # Root date
       match = re.search(r'\S*\-\-\-\s*root\-date:\s*(\d+\.\d+)', line)
       if match:
-         root_date = match.group(1)
+         decimal_date = match.group(1)
 
-         # TODO: Convert the floating point date to a standard format.
+         root_date = "invalid"
 
+         # Convert the floating point date to a standard format.
+         date_match = re.search(r'(\d+).(\d+)', decimal_date)
+         if date_match:
+            
+            year = date_match.group(1)
+            decimal_part = date_match.group(2)
 
-         if not segment_name in self.results.segment_data:
-            self.results.segment_data[segment_name] = []
+            # Convert the root date formatted as a decimal to a standard MM/DD/YYYY.
+            root_date = self.format_root_date(decimal_part, year)
 
-         self.results.segment_data[segment_name].append(f"The root date is {root_date}")
-         return
+            if not segment_name in self.results.segment_data:
+               self.results.segment_data[segment_name] = []
+
+            self.results.segment_data[segment_name].append(f"The root date is {root_date}")
+            return
 
       return
    
