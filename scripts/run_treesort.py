@@ -169,6 +169,9 @@ class Results:
    # JSON data that will be deserialized on the TreeSort analysis results page.
    json: str
 
+   # The number of estimated reassortments found in the annotated tree file.
+   reassortments: int
+
    # A list of text info for each segment.
    # TODO: Use an enum for the key?
    segment_data: dict[str, list[str]]
@@ -180,6 +183,7 @@ class Results:
    # C-tor
    def __init__(self):
       self.json = ""
+      self.reassortments = 0
       self.segment_data = {}
       self.treesort_stdout = ""
       self.treesort_list = []
@@ -590,6 +594,9 @@ class TreeSortRunner:
 
                   # &rea="NA(124)"
                   
+                  # Update the reassortments count in the results.
+                  self.results.reassortments += 1
+
                   # Determine which segments were reassorted and get each one's distance.
                   for token in reassortment.replace("rea=", "").strip().split(","):
 
@@ -650,6 +657,10 @@ class TreeSortRunner:
 
          # TODO: Delete the CSV file created by forester.jar?
 
+         # Add the reassortments count to the list of TreeSort messages in the results object.
+         s = "" if self.results.reassortments == 1 else "s"
+         self.results.treesort_list.append(f"TreeSort found {self.results.reassortments} reassortment event{s}")
+         
       except Exception as e:
          sys.stderr.write(f"Error in TreeSort:\n {e}\n")
          return False
@@ -746,7 +757,7 @@ class TreeSortRunner:
          # Convert the floating point date to a standard format.
          date_match = re.search(r'(\d+).(\d+)', decimal_date)
          if date_match:
-            
+
             year = date_match.group(1)
             decimal_part = date_match.group(2)
 
