@@ -747,6 +747,9 @@ class TreeSortRunner:
          self.results.segment_data[segment_name].append(f"Fraction of variation in root-to-tip distance: {r_2}")
          return
       
+      """
+      TODO: Make sure this works correctly and then re-add it.
+      
       # Root date
       match = re.search(r'\S*\-\-\-\s*root\-date:\s*(\d+\.\d+)', line)
       if match:
@@ -769,6 +772,7 @@ class TreeSortRunner:
 
             self.results.segment_data[segment_name].append(f"The root date is {root_date}")
             return
+      """
 
       return
    
