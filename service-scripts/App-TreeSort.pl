@@ -102,6 +102,9 @@ sub process_treesort
       {
          next if $p =~ /^\./;
 
+         # Don't copy the descriptor.csv file.
+         next if $p eq "descriptor.csv";
+
          # Use the p3 utility to copy the files in the work directory to the user's workspace.
          my @cmd = ("p3-cp", "-r", "-f", @suffix_map, "$work_dir/$p", "ws:" . $app->result_folder);
          print "@cmd\n";

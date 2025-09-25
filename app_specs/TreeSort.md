@@ -20,7 +20,6 @@ It takes the following parameters:
 | input_fasta_file_id | Input FASTA file ID | wsid | | |
 | input_fasta_group_id | Input genome group | wsid | | |
 | input_source | Input source | fasta_data, fasta_existing_dataset, fasta_file_id, fasta_group_id | :heavy_check_mark: | fasta_file_id |
-| is_time_scaled | Is time scaled? | boolean | | false |
 | match_regex | A regular expression for matching | string (regex) |  |  |
 | match_type  | Match on the "EPI_ISL_XXX" field, a regular expression, the strain, or the default | default, epi, regex, strain |  | default |
 | method | Method | local, mincut | :heavy_check_mark: | local |

@@ -6,6 +6,8 @@
 # Example usage: ./prepare_treesort_dataset.sh --segments "HA,NA" segments.fasta HA myoutdir
 # Example with default segments:  ./prepare_treesort_dataset.sh segments.fasta HA myoutdir
 
+echo -e "Starting prepare_treesort_dataset.sh\n"
+
 # These are the default segment names
 declare -a segments=("PB2" "PB1" "PA" "HA" "NP" "NA" "MP" "NS")
 FAST=0
@@ -62,9 +64,6 @@ do
    # Copy all this segment's sequences into a segment-specific FASTA file.
    cat $main_fasta | smof grep "|${seg}|" > "${outdir}/${seg}-${name}"
 
-   # NOTE: Seqkit can be used instead of smof, if necessary.
-   #seqkit grep -r -i -p "\|${seg}\|" $main_fasta > "${outdir}/${seg}-${name}"
-   
    # Was the FASTA file created and is it non-empty?
    if [[ -s "${outdir}/${seg}-${name}" ]]; then
       
@@ -137,7 +136,11 @@ fi
 echo -e "Rooting trees with TreeTime...\n"
 for seg in "${found_segments[@]}"
 do
-	treetime-root "${outdir}/${seg}-${name}.tre" "${outdir}/${seg}-${name}.aln" &
+   # Create a segment-specific text file to store treetime-root's stdout.
+   echo -e "SEGMENT: ${seg}\n" > "${outdir}/${seg}-treetime-stdout.txt"
+
+   # Run treetime-root and use tee to append to the segment-specific stdout file.
+	treetime-root "${outdir}/${seg}-${name}.tre" "${outdir}/${seg}-${name}.aln" | tee -a "${outdir}/${seg}-treetime-stdout.txt" &
 done
 wait
 
@@ -161,5 +164,10 @@ do
 	echo "${seg},${outdir}/${seg}-${name}.aln,${outdir}/${seg}-${name}.aln.rooted.tre" >> $descriptor
 done
 echo -e "The descriptor file was written to ${descriptor}\n"
+
+# Send found_segments to stdout so it can be retrieved by run_treesort.py.
+echo -e "FOUND_SEGMENTS: $(IFS=,; echo "${found_segments[*]}")\n"
+
+echo -e "Completed prepare_treesort_dataset.sh\n"
 
 exit 0
