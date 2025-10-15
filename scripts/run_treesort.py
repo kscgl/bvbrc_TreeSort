@@ -34,8 +34,11 @@ DESCRIPTOR_FILE_NAME = "descriptor.csv"
 # The default name of the input FASTA file.
 INPUT_FASTA_FILE_NAME = "input.fasta"
 
+# The name of the subdirectory created in the working directory to hold intermediate files.
+OUTPUT_SUBDIRECTORY_NAME = "files"
+
 # A CSV file we will create and populate with reassortment data.
-REASSORTMENTS_FILE_NAME = "TreeSort_reassortments.csv"
+REASSORTMENTS_FILE_NAME = "reassortments.csv" # "TreeSort_reassortments.csv"
 
 # The name of the result directories created by TreeSort will begin
 # with a segment name and end with this suffix.
@@ -49,7 +52,7 @@ STDOUT_FILENAME = "stdout.txt"
 STDERR_FILENAME = "stderr.txt"
 
 # The name of the summary HTML file we will generate.
-SUMMARY_FILENAME = "TreeSort_analysis_results.html"
+SUMMARY_FILENAME = "index.html" # "TreeSort_analysis_results.html"
 
 # The name of the HTML template file used when generating the summary file.
 SUMMARY_TEMPLATE_FILENAME = "treesort_summary_template.html"
@@ -484,6 +487,31 @@ class TreeSortRunner:
 
       except Exception as e:
          sys.stderr.write(f"Invalid job data:\n {e}\n")
+         return False
+
+      return True
+   
+
+   # Move intermediate files into a subdirectory in the working directory.
+   def move_intermediate_files(self) -> bool:
+
+      sys.stdout.write("\nIn TreeSortRunner.move_intermediate_files\n")
+
+      output_tree_file = f"{self.job_data.output_file}{TREE_FILE_EXTENSION}"
+
+      try:
+         output_subdir = f"{self.work_directory}/{OUTPUT_SUBDIRECTORY_NAME}"
+         if not os.path.exists(output_subdir):
+            os.mkdir(output_subdir)
+
+         # Move all files and directories except the summary HTML file, the reassortments CSV file, and the result tree file.
+         for item in os.listdir(self.work_directory):
+            item_path = os.path.join(self.work_directory, item)
+            if item not in [SUMMARY_FILENAME, REASSORTMENTS_FILE_NAME, output_tree_file] and os.path.exists(item_path):
+               subprocess.call(["mv", item_path, output_subdir], shell=False)
+
+      except Exception as e:
+         sys.stderr.write(f"Error moving intermediate files:\n {e}\n")
          return False
 
       return True
@@ -1113,6 +1141,9 @@ def main(argv=None) -> bool:
       traceback.print_exc(file=sys.stderr)
       sys.stderr.write("An error occurred TreeSortRunner.create_summary_html\n")
       sys.exit(-1)
+
+   # Move intermediate files into a subdirectory in the working directory.
+   runner.move_intermediate_files()
 
    return True
 
