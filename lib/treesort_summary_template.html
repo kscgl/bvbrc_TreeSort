@@ -166,7 +166,8 @@
          const outputFileEl = document.getElementById("treesort_output_file");
          if (outputFileEl) { 
             // Add a link to the output file (the annotated tree file).
-            outputFileEl.innerHTML = `<a href="${workspaceFolder}${resultFilename}" target="_blank">${resultFilename}</a>`;
+            outputFileEl.innerHTML = `<a href="/view/PhylogeneticTree2/?wsTreeFile=${workspaceFolder}${resultFilename}&fileType=nwk" target="_blank">${resultFilename}</a>`;
+            //outputFileEl.innerHTML = `<a href="${workspaceFolder}${resultFilename}" target="_blank">${resultFilename}</a>`;
          }
 
          // Get a reference to the "reassortments file" element.
