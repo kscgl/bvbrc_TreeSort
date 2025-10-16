@@ -4,6 +4,8 @@
       
       .treesort-page {
          font-family: "Helvetica Neue", Helvetica, Aria;
+         line-height: 1.5rem;
+         max-width: 900px;
          padding: 1.0rem;
       }
 
@@ -25,6 +27,10 @@
       .treesort--background-info {
          margin-bottom: 2.0rem;
       }
+
+      /*.treesort--inline-details {
+         margin: 0 0 0 0.5rem;
+      }*/
 
       .treesort--section-body {
          margin-bottom: 2.0rem;
@@ -72,18 +78,53 @@
 </head>
 <body>
    <div class="treesort-page">
-      <h1 class="treesort--title">TreeSort analysis results</h1>
+      <h1 class="treesort--title">TreeSort Analysis Results</h1>
 
-      <h2 class="treesort--section-title">About the results</h2>
+      <h3>About the results</h3>
       <div class="treesort--background-info">TreeSort can accurately identify recent and ancestral reassortment events on datasets with thousands of genomes. 
          Using the phylogeny of a selected segment as a reference and information from other gene segments, TreeSort finds the branches in the phylogeny 
          where reassortment is most likely to have occurred, reports the particular gene segments involved in reassortment, and lists their differences from 
          prior gene pairings.
       </div>
 
-      <h3>Root-to-tip regression</h3>
+      <h2 class="treesort--section-title">Summary</h2>
       <div class="treesort--section-body">
-         "Root-to-tip" regression data provides insight into the quality of the phylogenetic tree that was generated and includes several indicators:
+         TreeSort provided the following summary of its parameters and analysis:
+         <div id="treesort_summary"></div>
+      </div>
+
+      <h2 class="treesort--section-title">Result files</h2>
+
+      <h3>Annotated tree: <span id="treesort_output_file"></span></h3>
+      <div class="treesort--section-body">The primary result of the analysis is an annotated tree file. 
+         Information about reassorted segments is displayed at the associated nodes (strains) in the tree visualization.
+      </div>
+      
+      <h3>Reassortment summary: <span id="treesort_reassortments_file"></span></h3>
+      <div class="treesort--section-body">The TreeSort service parses the annotations in the tree file and generates a downloadable summary of all strains where 
+         reassortment is suspected. The reassortment summary file is a CSV file with the following columns:<br/>
+         <ul>
+            <li><b>strain</b>: The name of the strain from the FASTA header/defline</li>
+            <li><b>is_reassorted</b>: If a reassortment was inferred for this strain, this column will contain "Y".</li>
+            <li><b>is_uncertain</b>: If the reassortment placement is uncertain, this column will contain "Y". <br/><br/>
+               <div class="treesort--inline-details">TreeSort does not have enough information to confidently place a reassortment event on a specific branch of the tree. 
+               TreeSort always narrows down the reassortment event to a particular ancestral node on a tree, but may not distinguish which of the child branches 
+               was affected by reassortment. In those cases, TreeSort will annotate both child branches in the annotated tree file with a ?&lt;segment-name&gt; tag. 
+               For example, ?PB2(26) below indicates that the reassortment with PB2 might have happened on either of the child branches.<br/><br/>
+               Note that this section only applies to the "local" inference method (the default method for TreeSort). The "mincut" method always infers certain 
+               reassortment placements.</div>
+            </li>
+            <li><b>Segment columns</b>: The remaining columns correspond to the segments that were included in the analysis. If a segment was inferred to be reassorted, 
+               the column for that segment will contain the number of nucleotide differences between the reassorted segment and the closest prior relative.
+            </li>
+         </ul>
+         
+      </div>
+
+      <h2 class="treesort--section-title">Segment-specific files</h2>
+      <div class="treesort--section-body">
+         <b>Background</b>: In the segment-specific files, "Root-to-tip" regression data provides insight into the quality of the phylogenetic tree that was generated 
+         and includes several indicators:
          <ul>
             <li>The <b>R<sup>2</sup></b> value indicates the fraction of variation in root-to-tip distance explained by the sampling times. Higher values 
                correspond to more clock-like behavior (max 1.0).</li>
@@ -93,26 +134,6 @@
          </ul>
       </div>
 
-      <h2 class="treesort--section-title">Summary</h2>
-      <div class="treesort--section-body">
-         TreeSort provided the following summary of its parameters and analysis:
-         <div id="treesort_summary"></div>
-      </div>
-
-      <h2 class="treesort--section-title">Annotated tree file</h2>
-      <div class="treesort--section-body">
-         The primary result of the analysis is an annotated tree file: <span id="treesort_output_file"></span>. Information about reassorted segments
-         is displayed at the associated nodes (strains) in the tree visualization.
-      </div>
-
-      <h2 class="treesort--section-title">Reassortment summary</h2>
-      <div class="treesort--section-body">
-         The annotated tree file includes reassortment information for every node, but this is only useful for visualization. The TreeSort service 
-         parses the annotations in the tree file and generates a downloadable summary of all strains where reassortment is suspected: 
-         <span id="treesort_reassortments_file"></span>.
-      </div>
-
-      <h2 class="treesort--section-title">Segment-specific files</h2>
       <div id="treesort_segment_files"></div>
    </div>
 
