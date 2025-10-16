@@ -195,7 +195,7 @@
          const reassortmentsEl = document.getElementById("treesort_reassortments_file");
          if (reassortmentsEl) { 
             // Add a link to the reassortments summary CSV file.
-            reassortmentsEl.innerHTML = `<a href="${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
+            reassortmentsEl.innerHTML = `<a href="${workspaceFolder}${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
          }
 
          // Get a reference to the summary element.
@@ -256,7 +256,7 @@
                // Alternate row classes
                const rowClass = index_ % 2 ? "treesort--even" : "treesort--odd";
 
-               const fileURL = `${outputSubdirectory}/${segment_}${file_.path}`;
+               const fileURL = `${workspaceFolder}${outputSubdirectory}/${segment_}${file_.path}`;
 
                // Create a row for this file.
                rowsHTML += `<tr class="${rowClass}">
