@@ -256,7 +256,10 @@
                // Alternate row classes
                const rowClass = index_ % 2 ? "treesort--even" : "treesort--odd";
 
-               const fileURL = `${workspaceFolder}${outputSubdirectory}/${segment_}${file_.path}`;
+               const fileParts = file_.path.split(".");
+               const extension = parts.length > 1 ? fileParts.pop() : "";
+
+               const fileURL = `${workspaceFolder}${outputSubdirectory}/${segment_}${file_.path}&fileType=${extension}`;
 
                // Create a row for this file.
                rowsHTML += `<tr class="${rowClass}">
