@@ -312,7 +312,7 @@ class TreeSortRunner:
          "\"{{results_json}}\"": self.results.json,
          "{{segments}}": self.job_data.segments,
          "{{treesort_summary}}": treesort_summary,
-         "{{workspace_folder}}": ""
+         "{{workspace_folder}}": f"{self.job_data.output_path}/.{self.job_data.output_file}/",
       }
 
       # Replace all JavaScript variable strings in the template text.

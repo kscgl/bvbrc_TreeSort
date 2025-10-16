@@ -168,14 +168,13 @@
          if (outputFileEl) { 
             // Add a link to the output file (the annotated tree file).
             outputFileEl.innerHTML = `<a href="/view/PhylogeneticTree2/?wsTreeFile=${workspaceFolder}${resultFilename}&fileType=nwk" target="_blank">${resultFilename}</a>`;
-            //outputFileEl.innerHTML = `<a href="${workspaceFolder}${resultFilename}" target="_blank">${resultFilename}</a>`;
          }
 
          // Get a reference to the "reassortments file" element.
          const reassortmentsEl = document.getElementById("treesort_reassortments_file");
          if (reassortmentsEl) { 
             // Add a link to the reassortments summary CSV file.
-            reassortmentsEl.innerHTML = `<a href="${workspaceFolder}${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
+            reassortmentsEl.innerHTML = `<a href="${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
          }
 
          // Get a reference to the summary element.
@@ -236,11 +235,11 @@
                // Alternate row classes
                const rowClass = index_ % 2 ? "treesort--even" : "treesort--odd";
 
-               const fileURL = `${workspaceFolder}${segment_}${file_.path}`;
+               const fileURL = `${outputSubdirectory}/${segment_}${file_.path}`;
 
                // Create a row for this file.
                rowsHTML += `<tr class="${rowClass}">
-                  <td><a href="${fileURL}" target="_blank">${outputSubdirectory}/${segment_}${file_.path}</a></td>
+                  <td><a href="${fileURL}" target="_blank">${segment_}${file_.path}</a></td>
                   <td>${file_.description}</td>
                </tr>`;
             })
