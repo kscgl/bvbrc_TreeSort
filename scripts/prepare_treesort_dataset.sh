@@ -174,10 +174,10 @@ do
 	out_tsv="${outdir}/${seg}-${name}.aln.treetime/outliers.tsv"
 	out_rtt="${outdir}/${seg}-${name}.aln.treetime/rtt.csv"
 
-	# If outliers.tsv exists, ensure the first line starts with "names\t".
+	# If outliers.tsv exists, ensure the first line starts with "name\t".
 	if [ -f "$out_tsv" ]; then
 		# Use awk to safely handle the first line and write a temp file before replacing the original.
-		awk 'NR==1{ if ($0 ~ /^\t/) sub(/^\t/,"names\t"); else if ($0 !~ /^names/) $0 = "names\t" $0 } {print}' "$out_tsv" > "${out_tsv}.tmp" && mv "${out_tsv}.tmp" "$out_tsv"
+		awk 'NR==1{ if ($0 ~ /^\t/) sub(/^\t/,"name\t"); else if ($0 !~ /^name/) $0 = "name\t" $0 } {print}' "$out_tsv" > "${out_tsv}.tmp" && mv "${out_tsv}.tmp" "$out_tsv"
 	fi
 
 	# If rtt.csv exists, remove comment lines starting with '#'.

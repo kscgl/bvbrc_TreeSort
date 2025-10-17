@@ -192,14 +192,14 @@
          if (outputFileEl) { 
             // Create a link to the output file (the annotated tree file).
             const url = createTreeViewURL(`/workspace${workspaceFolder}${resultFilename}`);
-            outputFileEl.innerHTML = `<a href="${url}">${resultFilename}</a>`; //  target="_blank"
+            outputFileEl.innerHTML = `<a href="${url}" target="_blank">${resultFilename}</a>`;
          }
 
          // Get a reference to the "reassortments file" element.
          const reassortmentsEl = document.getElementById("treesort_reassortments_file");
          if (reassortmentsEl) { 
             // Add a link to the reassortments summary CSV file.
-            reassortmentsEl.innerHTML = `<a href="/workspace${workspaceFolder}${reassortmentsFilename}">${reassortmentsFilename}</a>`; //  target="_blank"
+            reassortmentsEl.innerHTML = `<a href="/workspace${workspaceFolder}${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`; 
          }
 
          // Get a reference to the summary element.
