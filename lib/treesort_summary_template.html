@@ -159,9 +159,13 @@
 
          { label: "Outliers", path: "-input.fasta.aln.treetime/outliers.tsv", description: "A table of outlier data"},
          { label: "Root to tip regression", path: "-input.fasta.aln.treetime/root_to_tip_regression.pdf", description: "A visualization of root-to-tip regression"},
-         { label: "Root to tip data", path: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data in CSV format"}
+         { label: "Root to tip data", path: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data in CSV format. Note that dates of nodes that didn't have a specified date are inferred from the root-to-tip regression."}
       ]
 
+      // Create a tree viewer URL for a given file.
+      function createTreeViewURL(filePath_) {
+         return `/view/PhylogeneticTree2/?wsTreeFile=${filePath_}&fileType=nwk&showInternalLabels=false`;
+      }
 
       // Get the segment summary from the JSON.
       function getSegmentSummary(segment_) {
@@ -180,22 +184,22 @@
          return `<ul>${list}</ul>`;
       }
 
-
       // Update placeholder text on the page.
       function populatePage() {
 
          // Get a reference to the output file element.
          const outputFileEl = document.getElementById("treesort_output_file");
          if (outputFileEl) { 
-            // Add a link to the output file (the annotated tree file).
-            outputFileEl.innerHTML = `<a href="/view/PhylogeneticTree2/?wsTreeFile=${workspaceFolder}${resultFilename}&fileType=nwk" target="_blank">${resultFilename}</a>`;
+            // Create a link to the output file (the annotated tree file).
+            const url = createTreeViewURL(`/workspace${workspaceFolder}${resultFilename}`);
+            outputFileEl.innerHTML = `<a href="${url}">${resultFilename}</a>`; //  target="_blank"
          }
 
          // Get a reference to the "reassortments file" element.
          const reassortmentsEl = document.getElementById("treesort_reassortments_file");
          if (reassortmentsEl) { 
             // Add a link to the reassortments summary CSV file.
-            reassortmentsEl.innerHTML = `<a href="${workspaceFolder}${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
+            reassortmentsEl.innerHTML = `<a href="/workspace${workspaceFolder}${reassortmentsFilename}">${reassortmentsFilename}</a>`; //  target="_blank"
          }
 
          // Get a reference to the summary element.
@@ -256,7 +260,22 @@
                // Alternate row classes
                const rowClass = index_ % 2 ? "treesort--even" : "treesort--odd";
 
-               const fileURL = `/workspace/${workspaceFolder}${outputSubdirectory}/${segment_}${file_.path}`;
+               const parts = filename.split(".");
+               const extension = parts.length > 1 ? parts.pop() : "";
+  
+               let fileURL = "";
+               
+               switch (extension.toLowerCase()) {
+                  case "tre":
+                  case "nwk":
+                  case "tree":
+                     fileURL = createTreeViewURL(`/workspace${workspaceFolder}${outputSubdirectory}/${segment_}${file_.path}`);
+                     break;
+
+                  default:
+                     fileURL = `/workspace${workspaceFolder}${outputSubdirectory}/${segment_}${file_.path}`;
+                     break;
+               }
 
                // Create a row for this file.
                rowsHTML += `<tr class="${rowClass}">
