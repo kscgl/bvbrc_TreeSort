@@ -152,14 +152,14 @@
       let segments = segmentList.split(",");
 
       const segmentFiles = [
-         { label: "Alignment", path: "-input.fasta.aln", description: "The alignment file"},
-         { label: "Dates", path: "-input.fasta.aln.dates.csv", description: "Dates found in the FASTA deflines"},
-         { label: "Rooted tree", path: "-input.fasta.aln.rooted.tre", description: "The rooted tree file"},
-         { label: "Tree", path: "-input.fasta.tre", description: "The tree file"},
-
-         { label: "Outliers", path: "-input.fasta.aln.treetime/outliers.tsv", description: "A table of outlier data"},
-         { label: "Root to tip regression", path: "-input.fasta.aln.treetime/root_to_tip_regression.pdf", description: "A visualization of root-to-tip regression"},
-         { label: "Root to tip data", path: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data in CSV format. Note that dates of nodes that didn't have a specified date are inferred from the root-to-tip regression."}
+         { label: "Alignment", suffix: "-input.fasta.aln", description: "The alignment file", type: "aln" },
+         { label: "Dates", suffix: "-input.fasta.aln.dates.csv", description: "Dates found in the FASTA deflines", type: "csv" },
+         { label: "Rooted tree", suffix: "-input.fasta.aln.rooted.tre", description: "The rooted tree file", type: "tre" },
+         { label: "Tree", suffix: "-input.fasta.tre", description: "The tree file", type: "tre" },
+         { label: "Outliers", suffix: "-input.fasta.aln.treetime/outliers.tsv", description: "A table of outlier data", type: "tsv" },
+         { label: "Root to tip regression", suffix: "-input.fasta.aln.treetime/root_to_tip_regression.pdf", description: "A visualization of root-to-tip regression", type: "pdf" },
+         { label: "Root to tip data", suffix: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data in CSV format. Note that dates of nodes that " + 
+            "didn't have a specified date are inferred from the root-to-tip regression.", type: "csv" }
       ]
 
       // Create a tree viewer URL for a given file.
@@ -260,26 +260,21 @@
                // Alternate row classes
                const rowClass = index_ % 2 ? "treesort--even" : "treesort--odd";
 
-               const parts = filename.split(".");
-               const extension = parts.length > 1 ? parts.pop() : "";
-  
                let fileURL = "";
                
-               switch (extension.toLowerCase()) {
+               switch (file_.type) {
                   case "tre":
-                  case "nwk":
-                  case "tree":
-                     fileURL = createTreeViewURL(`/workspace${workspaceFolder}${outputSubdirectory}/${segment_}${file_.path}`);
+                     fileURL = createTreeViewURL(`/workspace${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`);
                      break;
 
                   default:
-                     fileURL = `/workspace${workspaceFolder}${outputSubdirectory}/${segment_}${file_.path}`;
+                     fileURL = `/workspace${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`;
                      break;
                }
 
                // Create a row for this file.
                rowsHTML += `<tr class="${rowClass}">
-                  <td><a href="${fileURL}" target="_blank">${segment_}${file_.path}</a></td>
+                  <td><a href="${fileURL}" target="_blank">${segment_}${file_.suffix}</a></td>
                   <td>${file_.description}</td>
                </tr>`;
             })
