@@ -164,7 +164,7 @@
 
       // Create a tree viewer URL for a given file.
       function createTreeViewURL(filePath_) {
-         return `/view/PhylogeneticTree2/?wsTreeFile=${filePath_}&fileType=nwk&showInternalLabels=false`;
+         return `/view/PhylogeneticTree2/?labelSearch=false&idType=genome_id&labelType=genome_name&wsTreeFile=${filePath_}&fileType=nwk&showInternalLabels=false`;
       }
 
       // Get the segment summary from the JSON.
@@ -191,7 +191,7 @@
          const outputFileEl = document.getElementById("treesort_output_file");
          if (outputFileEl) { 
             // Create a link to the output file (the annotated tree file).
-            const url = createTreeViewURL(`/workspace${workspaceFolder}${resultFilename}`);
+            const url = createTreeViewURL(`${workspaceFolder}${resultFilename}`);
             outputFileEl.innerHTML = `<a href="${url}" target="_blank">${resultFilename}</a>`;
          }
 
@@ -264,7 +264,7 @@
                
                switch (file_.type) {
                   case "tre":
-                     fileURL = createTreeViewURL(`/workspace${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`);
+                     fileURL = createTreeViewURL(`${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`);
                      break;
 
                   default:
