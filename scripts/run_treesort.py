@@ -3,6 +3,7 @@
 import argparse
 import csv
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 import json
 from math import ceil, floor, fmod, trunc
@@ -511,6 +512,32 @@ class TreeSortRunner:
 
       return True
 
+
+   # Format a datetime for the start and end times of program execution.
+   @staticmethod
+   def format_datetime(dt: datetime) -> str:
+
+      # Portable 12-hour time, lowercase am/pm, and mm/dd/yy date
+      return dt.strftime("%I:%M%p, %m/%d/%y").lstrip("0").replace("AM", "am").replace("PM", "pm")
+   
+
+   # Format the end datetime and include the duration between it and the start datetime.
+   @staticmethod
+   def format_end_datetime_with_duration(end: datetime, start: datetime) -> str:
+
+      formatted_end = TreeSortRunner.format_datetime(end)
+
+      total_seconds = int((end - start).total_seconds())
+      minutes, seconds = divmod(total_seconds, 60)
+      parts = []
+
+      if minutes:
+         parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+
+      parts.append(f"{seconds} second{'s' if seconds != 1 else ''}")
+
+      return f"{formatted_end} ({', '.join(parts)})" 
+ 
 
    # Format the Results object's data as HTML.
    def format_results(self):
@@ -1095,6 +1122,10 @@ class TreeSortRunner:
 
 def main(argv=None) -> bool:
     
+   # Print the start time to stdout.
+   main_start = datetime.now()
+   print(f"Started at {TreeSortRunner.format_datetime(main_start)}")
+   
    # Exclude the script name.
    if argv is None:
       argv = sys.argv[1:]  
@@ -1156,11 +1187,17 @@ def main(argv=None) -> bool:
       sys.stderr.write("An error occurred in TreeSortRunner.prepare_input_file\n")
       sys.exit(-1)
 
+   # The start time of prepare_dataset.
+   pd_start = datetime.now()
+
    # Prepare the dataset
    if not runner.run_prepare_dataset():
       traceback.print_exc(file=sys.stderr)
       sys.stderr.write("An error occurred in TreeSortRunner.run_prepare_dataset\n")
       sys.exit(-1)
+
+   # Print the end time and total duration of prepare_dataset.
+   print(f"Finished prepare_dataset at {TreeSortRunner.format_end_datetime_with_duration(datetime.now(), pd_start)}")
 
    # Run TreeSort
    if not runner.tree_sort():
@@ -1182,6 +1219,9 @@ def main(argv=None) -> bool:
 
    # Modify the annotations in the output tree file.
    runner.modify_tree_file_annotations()
+
+   # Print the end time and total duration of main.
+   print(f"Finished at {TreeSortRunner.format_end_datetime_with_duration(datetime.now(), main_start)}")
 
    return True
 
