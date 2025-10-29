@@ -3,6 +3,7 @@
 import argparse
 import csv
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 import json
 from math import ceil, floor, fmod, trunc
@@ -34,8 +35,11 @@ DESCRIPTOR_FILE_NAME = "descriptor.csv"
 # The default name of the input FASTA file.
 INPUT_FASTA_FILE_NAME = "input.fasta"
 
+# The name of the subdirectory created in the working directory to hold intermediate files.
+OUTPUT_SUBDIRECTORY_NAME = "files"
+
 # A CSV file we will create and populate with reassortment data.
-REASSORTMENTS_FILE_NAME = "TreeSort_reassortments.csv"
+REASSORTMENTS_FILE_NAME = "reassortments.csv"
 
 # The name of the result directories created by TreeSort will begin
 # with a segment name and end with this suffix.
@@ -49,7 +53,7 @@ STDOUT_FILENAME = "stdout.txt"
 STDERR_FILENAME = "stderr.txt"
 
 # The name of the summary HTML file we will generate.
-SUMMARY_FILENAME = "TreeSort_analysis_results.html"
+SUMMARY_FILENAME = "index.html"
 
 # The name of the HTML template file used when generating the summary file.
 SUMMARY_TEMPLATE_FILENAME = "treesort_summary_template.html"
@@ -208,7 +212,7 @@ class TreeSortRunner:
    # The JSON data for the job.
    job_data: JobData
 
-   # Reassortment data generated in parse_annotated_tree.
+   # Reassortment data generated in create_reassortments_csv_file.
    reassorted_strains = []
 
    # A collection of result data to include in the analysis HTML file.
@@ -253,6 +257,185 @@ class TreeSortRunner:
       # Initialize the results object.
       self.results = Results()
 
+
+   # Parse the annotated tree file for reassorted strains and create "reassortments.csv".
+   def create_reassortments_csv_file(self) -> bool:
+
+      sys.stdout.write("\nIn TreeSortRunner.create_reassortments_csv_file\n")
+      
+      # The result status defaults to true.
+      result_status = True
+
+      # Initialize the list of results.
+      results = []
+
+      # The path of the CSV output file and the annotated tree input file.
+      csv_file_path = f"{self.work_directory}/{self.job_data.output_file}.csv"
+      tree_file_path = f"{self.work_directory}/{self.job_data.output_file}{TREE_FILE_EXTENSION}"
+
+      # The path of the strain reassortments CSV file we will create.
+      reassortments_path = f"{self.work_directory}/{REASSORTMENTS_FILE_NAME}"
+
+      # Get the path for forester.jar.
+      # TODO: this is only temporary...forester.jar will be updated in the container soon (?).
+      top = safe_trim(os.getenv("KB_TOP"))
+      if len(top) < 1:
+         raise Exception("Invalid KB_TOP environment variable in create_reassortments_csv_file.")
+   
+      # The path depends on whether TreeSort is run in production or development.
+      dev_path = os.path.join(top, "modules", "treesort", "lib", FORESTER_JAR)
+      prod_path = os.path.join(top, "lib", FORESTER_JAR)
+
+      if os.path.exists(prod_path):
+         forester_path = prod_path
+      elif os.path.exists(dev_path):
+         forester_path = dev_path
+      else:
+         raise Exception(f"Unable to find {FORESTER_JAR}")
+
+      try:
+         cmd = ["java", FORESTER_JAVA_PARAMETERS, "-cp", forester_path, FORESTER_CLASS]
+
+         # Add the path of the annotated tree file.
+         cmd.append(tree_file_path)
+
+         # Add the path of the CSV output file.
+         cmd.append(csv_file_path)
+
+         # Display the command about to be run.
+         print(f"{' '.join(cmd)}\n")
+
+         # Run the command
+         cmd_result = subprocess.call(cmd, shell=False)
+
+         if cmd_result > 0 or not os.path.exists(csv_file_path):
+            raise Exception(f"Forester was unable to generate the CSV file")
+         
+         # Open the CSV file
+         with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
+            reader = csv.reader(csvfile)
+
+            sys.stdout.write("\nReading the results CSV file.\n")
+
+            for row in reader:
+               
+               is_reassorted = False
+               is_uncertain = False
+
+               # Get the strain/isolate name.
+               strain = safe_trim(row[0])
+               if len(strain) < 1:
+                  continue
+               
+               # Maintain a distance value for each segment.
+               PB2 = ""
+               PB1 = ""
+               PA = ""
+               HA = ""
+               NP = ""
+               NA = ""
+               MP = ""
+               NS = ""
+
+               reassortment = ""
+
+               # Look for annotations in columns 1 and 2 (column 0 should have the strain name).
+               annotation1 = row[1] if len(row) > 1 else None
+               annotation2 = row[2] if len(row) > 2 else None
+
+               # Did this strain have reassortment?
+               if annotation1 == "is_reassorted=1":
+                  # This column should have one or more segment names and distances.
+                  if not annotation2:
+                     continue
+                  reassortment = annotation2
+                  is_reassorted = True
+
+               elif annotation2 == "is_reassorted=1":
+                  # This column should have one or more segment names and distances.
+                  if not annotation1:
+                     continue
+                  reassortment = annotation1
+                  is_reassorted = True
+
+               # If reassortment was detected we will determine the affected segment(s).
+               if is_reassorted:
+
+                  # &rea="NA(124)"
+                  
+                  # Update the reassortments count in the results.
+                  self.results.reassortments += 1
+
+                  # Determine which segments were reassorted and get each one's distance.
+                  for token in reassortment.replace("rea=", "").strip().split(","):
+
+                     if token.startswith("?"):
+                        is_uncertain = True
+                        token = token[1:]
+
+                     match = re.match(r"([A-Z0-9]+)\((\d+)\)", token)
+                     if match:
+                        name, number = match.groups()
+                        if name == "PB2":
+                           PB2 = number
+                        elif name == "PB1":
+                           PB1 = number
+                        elif name == "PA":
+                           PA = number
+                        elif name == "HA":
+                           HA = number
+                        elif name == "NP":
+                           NP = number
+                        elif name == "NA":
+                           NA = number
+                        elif name == "MP":
+                           MP = number
+                        elif name == "NS":
+                           NS = number
+                  
+               # Update the results
+               results.append({
+                  "strain": strain, 
+                  "is_reassorted": "Y" if is_reassorted else "",
+                  "is_uncertain": "Y" if is_uncertain else "",
+                  "PB2": PB2,
+                  "PB1": PB1,
+                  "PA": PA,
+                  "HA": HA,
+                  "NP": NP,
+                  "NA": NA,
+                  "MP": MP,
+                  "NS": NS,
+               })
+
+         if len(results) > 0:
+
+            sys.stdout.write(f"Writing transformed reassortment data to {reassortments_path}\n\n")
+
+            # Sort the results so that the reassorted strains are at the top.
+            sorted_results = sorted(results, key=lambda r: r["is_reassorted"], reverse=True)
+
+            # Create the strain reassortments file.
+            with open(reassortments_path, "w+", newline="", encoding="utf-8") as result_file:
+               writer = csv.DictWriter(result_file, fieldnames=["strain", "is_reassorted", "is_uncertain", "PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"])
+               writer.writeheader()
+               writer.writerows(sorted_results)
+
+         else:
+            sys.stderr.write("No strains were found in the CSV results file")
+
+         # TODO: Delete the CSV file created by forester.jar?
+
+         # Add the reassortments count to the list of TreeSort messages in the results object.
+         s = "" if self.results.reassortments == 1 else "s"
+         self.results.treesort_list.append(f"TreeSort found {self.results.reassortments} reassortment event{s}")
+         
+      except Exception as e:
+         sys.stderr.write(f"Error in TreeSort:\n {e}\n")
+         return False
+ 
+      return result_status
+   
 
    # Create the summary report file.
    def create_summary_html(self) -> bool:
@@ -303,12 +486,13 @@ class TreeSortRunner:
 
       # The values of the JavaScript variables in the template.
       js_variables = {
+         "{{output_subdirectory}}": OUTPUT_SUBDIRECTORY_NAME,  
          "{{reassortments_filename}}": REASSORTMENTS_FILE_NAME,
          "{{result_filename}}": f"{self.job_data.output_file}{TREE_FILE_EXTENSION}",
          "\"{{results_json}}\"": self.results.json,
          "{{segments}}": self.job_data.segments,
          "{{treesort_summary}}": treesort_summary,
-         "{{workspace_folder}}": ""
+         "{{workspace_folder}}": f"{self.job_data.output_path}/.{self.job_data.output_file}/",
       }
 
       # Replace all JavaScript variable strings in the template text.
@@ -328,6 +512,32 @@ class TreeSortRunner:
 
       return True
 
+
+   # Format a datetime for the start and end times of program execution.
+   @staticmethod
+   def format_datetime(dt: datetime) -> str:
+
+      # Portable 12-hour time, lowercase am/pm, and mm/dd/yy date
+      return dt.strftime("%I:%M%p, %m/%d/%y").lstrip("0").replace("AM", "am").replace("PM", "pm")
+   
+
+   # Format the end datetime and include the duration between it and the start datetime.
+   @staticmethod
+   def format_end_datetime_with_duration(end: datetime, start: datetime) -> str:
+
+      formatted_end = TreeSortRunner.format_datetime(end)
+
+      total_seconds = int((end - start).total_seconds())
+      minutes, seconds = divmod(total_seconds, 60)
+      parts = []
+
+      if minutes:
+         parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+
+      parts.append(f"{seconds} second{'s' if seconds != 1 else ''}")
+
+      return f"{formatted_end} ({', '.join(parts)})" 
+ 
 
    # Format the Results object's data as HTML.
    def format_results(self):
@@ -489,184 +699,64 @@ class TreeSortRunner:
       return True
    
 
-   # Parse the annotated tree file for reassortment info.
-   def parse_annotated_tree(self) -> bool:
+   # Modify the annotations in the output tree file.
+   def modify_tree_file_annotations(self) -> bool:
 
-      sys.stdout.write("\nIn TreeSortRunner.parse_annotated_tree\n")
-      
-      # The result status defaults to true.
-      result_status = True
-
-      # Initialize the list of results.
-      results = []
-
-      # The path of the CSV output file and the annotated tree input file.
-      csv_file_path = f"{self.work_directory}/{self.job_data.output_file}.csv"
       tree_file_path = f"{self.work_directory}/{self.job_data.output_file}{TREE_FILE_EXTENSION}"
 
-      # The path of the strain reassortments CSV file we will create.
-      reassortments_path = f"{self.work_directory}/{REASSORTMENTS_FILE_NAME}"
+      try:
+         # Read the file content
+         with open(tree_file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+         
+         # Define the regex pattern that matches: [&rea="word(number)",is_reassorted=1]
+         pattern = r'\[&rea="(\??\w+\(\d+\))",is_reassorted=1\]'
+         
+         # Perform the replacement using the captured group.
+         # \1 refers to the first capture group: (\??\w+\(\d+\))
+         modified_content = re.sub(pattern, r"[&\1]", content)
+         
+         # Remove the annotations for nodes that weren't reassorted.
+         modified_content = modified_content.replace("[&is_reassorted=0]", "")
 
-      # Get the path for forester.jar.
-      # TODO: this is only temporary...forester.jar will be updated in the container soon (?).
-      top = safe_trim(os.getenv("KB_TOP"))
-      if len(top) < 1:
-         raise Exception("Invalid KB_TOP environment variable in parse_annotated_tree.")
-   
-      # The path depends on whether TreeSort is run in production or development.
-      dev_path = os.path.join(top, "modules", "treesort", "lib", FORESTER_JAR)
-      prod_path = os.path.join(top, "lib", FORESTER_JAR)
+         # Write the modified content back to the file
+         with open(tree_file_path, 'w', encoding='utf-8') as file:
+            file.write(modified_content)
+         
+      except FileNotFoundError:
+         print(f"Error: File '{self.job_data.output_file}{TREE_FILE_EXTENSION}' not found")
+         return False
+      except Exception as e:
+         print(f"Error: {e}")
+         return False
 
-      if os.path.exists(prod_path):
-         forester_path = prod_path
-      elif os.path.exists(dev_path):
-         forester_path = dev_path
-      else:
-         raise Exception(f"Unable to find {FORESTER_JAR}")
+      return True
+
+
+   # Move intermediate files into a subdirectory in the working directory.
+   def move_intermediate_files(self) -> bool:
+
+      sys.stdout.write("\nIn TreeSortRunner.move_intermediate_files\n")
+
+      output_tree_file = f"{self.job_data.output_file}{TREE_FILE_EXTENSION}"
 
       try:
-         cmd = ["java", FORESTER_JAVA_PARAMETERS, "-cp", forester_path, FORESTER_CLASS]
+         output_subdir = f"{self.work_directory}/{OUTPUT_SUBDIRECTORY_NAME}"
+         if not os.path.exists(output_subdir):
+            os.mkdir(output_subdir)
 
-         # Add the path of the annotated tree file.
-         cmd.append(tree_file_path)
+         # Move all files and directories except the summary HTML file, the reassortments CSV file, and the result tree file.
+         for item in os.listdir(self.work_directory):
+            item_path = os.path.join(self.work_directory, item)
+            if item not in [SUMMARY_FILENAME, REASSORTMENTS_FILE_NAME, output_tree_file] and os.path.exists(item_path):
+               subprocess.call(["mv", item_path, output_subdir], shell=False)
 
-         # Add the path of the CSV output file.
-         cmd.append(csv_file_path)
-
-         # Display the command about to be run.
-         print(f"{' '.join(cmd)}\n")
-
-         # Run the command
-         cmd_result = subprocess.call(cmd, shell=False)
-
-         if cmd_result > 0 or not os.path.exists(csv_file_path):
-            raise Exception(f"Forester was unable to generate the CSV file")
-         
-         # Open the CSV file
-         with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
-            reader = csv.reader(csvfile)
-
-            sys.stdout.write("\nReading the results CSV file.\n")
-
-            for row in reader:
-               
-               is_reassorted = False
-               is_uncertain = False
-
-               # Get the strain/isolate name.
-               strain = safe_trim(row[0])
-               if len(strain) < 1:
-                  continue
-               
-               # Maintain a distance value for each segment.
-               PB2 = ""
-               PB1 = ""
-               PA = ""
-               HA = ""
-               NP = ""
-               NA = ""
-               MP = ""
-               NS = ""
-
-               reassortment = ""
-
-               # Look for annotations in columns 1 and 2 (column 0 should have the strain name).
-               annotation1 = row[1] if len(row) > 1 else None
-               annotation2 = row[2] if len(row) > 2 else None
-
-               # Did this strain have reassortment?
-               if annotation1 == "is_reassorted=1":
-                  # This column should have one or more segment names and distances.
-                  if not annotation2:
-                     continue
-                  reassortment = annotation2
-                  is_reassorted = True
-
-               elif annotation2 == "is_reassorted=1":
-                  # This column should have one or more segment names and distances.
-                  if not annotation1:
-                     continue
-                  reassortment = annotation1
-                  is_reassorted = True
-
-               # If reassortment was detected we will determine the affected segment(s).
-               if is_reassorted:
-
-                  # &rea="NA(124)"
-                  
-                  # Update the reassortments count in the results.
-                  self.results.reassortments += 1
-
-                  # Determine which segments were reassorted and get each one's distance.
-                  for token in reassortment.replace("rea=", "").strip().split(","):
-
-                     if token.startswith("?"):
-                        is_uncertain = True
-                        token = token[1:]
-
-                     match = re.match(r"([A-Z0-9]+)\((\d+)\)", token)
-                     if match:
-                        name, number = match.groups()
-                        if name == "PB2":
-                           PB2 = number
-                        elif name == "PB1":
-                           PB1 = number
-                        elif name == "PA":
-                           PA = number
-                        elif name == "HA":
-                           HA = number
-                        elif name == "NP":
-                           NP = number
-                        elif name == "NA":
-                           NA = number
-                        elif name == "MP":
-                           MP = number
-                        elif name == "NS":
-                           NS = number
-                  
-               # Update the results
-               results.append({
-                  "strain": strain, 
-                  "is_reassorted": "Y" if is_reassorted else "",
-                  "is_uncertain": "Y" if is_uncertain else "",
-                  "PB2": PB2,
-                  "PB1": PB1,
-                  "PA": PA,
-                  "HA": HA,
-                  "NP": NP,
-                  "NA": NA,
-                  "MP": MP,
-                  "NS": NS,
-               })
-
-         if len(results) > 0:
-
-            sys.stdout.write(f"Writing transformed reassortment data to {reassortments_path}\n\n")
-
-            # Sort the results so that the reassorted strains are at the top.
-            sorted_results = sorted(results, key=lambda r: r["is_reassorted"], reverse=True)
-
-            # Create the strain reassortments file.
-            with open(reassortments_path, "w+", newline="", encoding="utf-8") as result_file:
-               writer = csv.DictWriter(result_file, fieldnames=["strain", "is_reassorted", "is_uncertain", "PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"])
-               writer.writeheader()
-               writer.writerows(sorted_results)
-
-         else:
-            sys.stderr.write("No strains were found in the CSV results file")
-
-         # TODO: Delete the CSV file created by forester.jar?
-
-         # Add the reassortments count to the list of TreeSort messages in the results object.
-         s = "" if self.results.reassortments == 1 else "s"
-         self.results.treesort_list.append(f"TreeSort found {self.results.reassortments} reassortment event{s}")
-         
       except Exception as e:
-         sys.stderr.write(f"Error in TreeSort:\n {e}\n")
+         sys.stderr.write(f"Error moving intermediate files:\n {e}\n")
          return False
- 
-      return result_status
-   
+
+      return True
+
 
    # Parse a line from TreeSort's stdout to look for important info.
    def parse_treesort_stdout_line(self, line: str):
@@ -1032,6 +1122,10 @@ class TreeSortRunner:
 
 def main(argv=None) -> bool:
     
+   # Print the start time to stdout.
+   main_start = datetime.now()
+   print(f"Started at {TreeSortRunner.format_datetime(main_start)}")
+   
    # Exclude the script name.
    if argv is None:
       argv = sys.argv[1:]  
@@ -1093,11 +1187,17 @@ def main(argv=None) -> bool:
       sys.stderr.write("An error occurred in TreeSortRunner.prepare_input_file\n")
       sys.exit(-1)
 
+   # The start time of prepare_dataset.
+   pd_start = datetime.now()
+
    # Prepare the dataset
    if not runner.run_prepare_dataset():
       traceback.print_exc(file=sys.stderr)
       sys.stderr.write("An error occurred in TreeSortRunner.run_prepare_dataset\n")
       sys.exit(-1)
+
+   # Print the end time and total duration of prepare_dataset.
+   print(f"Finished prepare_dataset at {TreeSortRunner.format_end_datetime_with_duration(datetime.now(), pd_start)}")
 
    # Run TreeSort
    if not runner.tree_sort():
@@ -1105,14 +1205,23 @@ def main(argv=None) -> bool:
       sys.stderr.write("An error occurred in TreeSortRunner.tree_sort\n")
       sys.exit(-1)
 
-   # Parse the annotated tree file for reassorted strains.
-   runner.parse_annotated_tree()
+   # Parse the annotated tree file for reassorted strains and create "reassortments.csv".
+   runner.create_reassortments_csv_file()
 
    # Create a summary HTML file.
    if not runner.create_summary_html():
       traceback.print_exc(file=sys.stderr)
       sys.stderr.write("An error occurred TreeSortRunner.create_summary_html\n")
       sys.exit(-1)
+
+   # Move intermediate files into a subdirectory in the working directory.
+   runner.move_intermediate_files()
+
+   # Modify the annotations in the output tree file.
+   runner.modify_tree_file_annotations()
+
+   # Print the end time and total duration of main.
+   print(f"Finished at {TreeSortRunner.format_end_datetime_with_duration(datetime.now(), main_start)}")
 
    return True
 
