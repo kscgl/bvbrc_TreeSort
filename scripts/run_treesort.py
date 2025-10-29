@@ -683,10 +683,10 @@ class TreeSortRunner:
             content = file.read()
          
          # Define the regex pattern that matches: [&rea="word(number)",is_reassorted=1]
-         pattern = r'\[&rea="(\w+\(\d+\))",is_reassorted=1\]'
+         pattern = r'\[&rea="(\??\w+\(\d+\))",is_reassorted=1\]'
          
          # Perform the replacement using the captured group.
-         # \1 refers to the first capture group: (\w+\(\d+\))
+         # \1 refers to the first capture group: (\??\w+\(\d+\))
          modified_content = re.sub(pattern, r"[&\1]", content)
          
          # Remove the annotations for nodes that weren't reassorted.
