@@ -536,7 +536,7 @@ class TreeSortRunner:
 
       # The paths of the annotated tree file and the PhyloXML file that will be created.
       tree_file_path = f"{self.work_directory}/{self.job_data.output_file}{TREE_FILE_EXTENSION}"
-      phyloxml_file_path = f"{self.work_directory}/{self.job_data.output_file}.phylxml"
+      phyloxml_file_path = f"{self.work_directory}/{self.job_data.output_file}{PHYLOXML_FILE_EXTENSION}"
       
       # Get the path for forester.jar.
       # TODO: this is only temporary...forester.jar will be updated in the container soon (?).
