@@ -158,13 +158,13 @@
          { label: "Tree", suffix: "-input.fasta.tre", description: "The tree file", type: "tre" },
          { label: "Outliers", suffix: "-input.fasta.aln.treetime/outliers.tsv", description: "A table of outlier data", type: "tsv" },
          { label: "Root to tip regression", suffix: "-input.fasta.aln.treetime/root_to_tip_regression.pdf", description: "A visualization of root-to-tip regression", type: "pdf" },
-         { label: "Root to tip data", suffix: "-input.fasta.aln.treetime/rtt.csv", description: "Tbe root-to-tip data in CSV format. Note that dates of nodes that " + 
+         { label: "Root to tip data", suffix: "-input.fasta.aln.treetime/rtt.csv", description: "The root-to-tip data in CSV format. Note that dates of nodes that " + 
             "didn't have a specified date are inferred from the root-to-tip regression.", type: "csv" }
       ]
 
       // Create a tree viewer URL for a given file.
       function createTreeViewURL(filePath_) {
-         return `/view/PhylogeneticTree2/?labelSearch=false&idType=genome_id&labelType=genome_name&wsTreeFile=${filePath_}&fileType=nwk&hasReassortments=true`;
+         return `/view/PhylogeneticTree2/?labelSearch=false&idType=genome_id&labelType=genome_name&wsTreeFile=${filePath_}&fileType=nwk`;
       }
 
       // Get the segment summary from the JSON.

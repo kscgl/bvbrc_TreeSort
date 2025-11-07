@@ -91,6 +91,7 @@ sub process_treesort
    my %suffix_map = (aln => 'aligned_dna_fasta',
                      csv => 'csv',
                      pdf => 'pdf',
+                     phyloxml => 'phyloxml',
                      tre => 'nwk',
                      tsv => 'tsv');
 

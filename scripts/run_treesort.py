@@ -25,9 +25,10 @@ BVBRC_URL = "https://www.bv-brc.org"
 DEFAULT_REF_SEGMENT = "HA"
 
 # The forester Java code parses the result .tre file and returns strain names and their annotations.
-FORESTER_CLASS = "org.forester.application.treesort_reformate"
 FORESTER_JAR = "forester.jar"
 FORESTER_JAVA_PARAMETERS = "-Xmx8048m"
+FORESTER_PHYLOXML_CONVERTER_CLASS = "org.forester.application.phyloxml_converter"
+FORESTER_TREESORT_REFORMATE_CLASS = "org.forester.application.treesort_reformate"
 
 # The name of the descriptor file.
 DESCRIPTOR_FILE_NAME = "descriptor.csv"
@@ -37,6 +38,9 @@ INPUT_FASTA_FILE_NAME = "input.fasta"
 
 # The name of the subdirectory created in the working directory to hold intermediate files.
 OUTPUT_SUBDIRECTORY_NAME = "files"
+
+# The file extension of the PhyloXML file created from the annotated tree file.
+PHYLOXML_FILE_EXTENSION = ".phyloxml"
 
 # A CSV file we will create and populate with reassortment data.
 REASSORTMENTS_FILE_NAME = "reassortments.csv"
@@ -278,7 +282,7 @@ class TreeSortRunner:
       # Initialize the list of results.
       results = []
 
-      # The path of the CSV output file and the annotated tree input file.
+      # The paths of the CSV output file and the annotated tree input file.
       csv_file_path = f"{self.work_directory}/{self.job_data.output_file}.csv"
       tree_file_path = f"{self.work_directory}/{self.job_data.output_file}{TREE_FILE_EXTENSION}"
 
@@ -303,7 +307,7 @@ class TreeSortRunner:
          raise Exception(f"Unable to find {FORESTER_JAR}")
 
       try:
-         cmd = ["java", FORESTER_JAVA_PARAMETERS, "-cp", forester_path, FORESTER_CLASS]
+         cmd = ["java", FORESTER_JAVA_PARAMETERS, "-cp", forester_path, FORESTER_TREESORT_REFORMATE_CLASS]
 
          # Add the path of the annotated tree file.
          cmd.append(tree_file_path)
@@ -522,6 +526,58 @@ class TreeSortRunner:
       return True
 
 
+   # Create a PhyloXML version of the result tree.
+   def export_tree_as_phyloxml(self) -> bool:
+
+      sys.stdout.write("\nIn TreeSortRunner.export_tree_as_phyloxml\n")
+      
+      # The result status defaults to true.
+      result_status = True
+
+      # The paths of the annotated tree file and the PhyloXML file that will be created.
+      tree_file_path = f"{self.work_directory}/{self.job_data.output_file}{TREE_FILE_EXTENSION}"
+      phyloxml_file_path = f"{self.work_directory}/{self.job_data.output_file}.phylxml"
+      
+      # Get the path for forester.jar.
+      # TODO: this is only temporary...forester.jar will be updated in the container soon (?).
+      top = safe_trim(os.getenv("KB_TOP"))
+      if len(top) < 1:
+         raise Exception("Invalid KB_TOP environment variable in export_tree_as_phyloxml.")
+   
+      # The path depends on whether TreeSort is run in production or development.
+      dev_path = os.path.join(top, "modules", "treesort", "lib", FORESTER_JAR)
+      prod_path = os.path.join(top, "lib", FORESTER_JAR)
+
+      if os.path.exists(prod_path):
+         forester_path = prod_path
+      elif os.path.exists(dev_path):
+         forester_path = dev_path
+      else:
+         raise Exception(f"Unable to find {FORESTER_JAR}")
+
+      try:
+         cmd = ["java", FORESTER_JAVA_PARAMETERS, "-cp", forester_path, 
+            FORESTER_PHYLOXML_CONVERTER_CLASS,
+            "-f=nn",
+            tree_file_path,
+            phyloxml_file_path]
+
+         # Display the command about to be run.
+         print(f"{' '.join(cmd)}\n")
+
+         # Run the command
+         cmd_result = subprocess.call(cmd, shell=False)
+
+         if cmd_result > 0 or not os.path.exists(phyloxml_file_path):
+            raise Exception(f"Forester was unable to export the PhyloXML file")
+         
+      except Exception as e:
+         sys.stderr.write(f"Error in export_tree_as_phyloxml:\n {e}\n")
+         return False
+ 
+      return result_status
+
+
    # Format a datetime for the start and end times of program execution.
    @staticmethod
    def format_datetime(dt: datetime) -> str:
@@ -708,50 +764,12 @@ class TreeSortRunner:
       return True
    
 
-   # Modify the annotations in the output tree file.
-   def modify_tree_file_comments(self) -> bool:
-
-      tree_file_path = f"{self.work_directory}/{self.job_data.output_file}{TREE_FILE_EXTENSION}"
-
-      try:
-         # Read the file content
-         with open(tree_file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-         
-         # Remove comments for nodes that haven't been reassorted.
-         content = content.replace("[&is_reassorted=0]", "")
-
-         # Put unquoted strain names inside single quotes.
-         unquoted_pattern = re.compile(TREE_FILE_UNQUOTED_NAME_REGEX)
-         content = unquoted_pattern.sub(TreeSortRunner.quote_strain_names, content)
-
-         # Update the modified content using the internal node regex.
-         internal_pattern = re.compile(TREE_FILE_TS_NODE_REGEX)
-         content = internal_pattern.sub(TreeSortRunner.replace_ts_nodes, content)
-
-         # Update the modified content using the external node regex.
-         external_pattern = re.compile(TREE_FILE_STRAIN_NAME_REGEX)
-         content = external_pattern.sub(TreeSortRunner.replace_strain_names, content)
-
-         # Write the modified content back to the file
-         with open(tree_file_path, 'w', encoding='utf-8') as file:
-            file.write(content)
-         
-      except FileNotFoundError:
-         print(f"Error: File '{self.job_data.output_file}{TREE_FILE_EXTENSION}' not found")
-         return False
-      except Exception as e:
-         print(f"Error: {e}")
-         return False
-
-      return True
-
-
    # Move intermediate files into a subdirectory in the working directory.
    def move_intermediate_files(self) -> bool:
 
       sys.stdout.write("\nIn TreeSortRunner.move_intermediate_files\n")
 
+      output_phyloxml_file = f"{self.job_data.output_file}{PHYLOXML_FILE_EXTENSION}"
       output_tree_file = f"{self.job_data.output_file}{TREE_FILE_EXTENSION}"
 
       try:
@@ -762,7 +780,8 @@ class TreeSortRunner:
          # Move all files and directories except the summary HTML file, the reassortments CSV file, and the result tree file.
          for item in os.listdir(self.work_directory):
             item_path = os.path.join(self.work_directory, item)
-            if item not in [SUMMARY_FILENAME, REASSORTMENTS_FILE_NAME, output_tree_file] and os.path.exists(item_path):
+            if item not in [SUMMARY_FILENAME, REASSORTMENTS_FILE_NAME, output_tree_file, output_phyloxml_file] \
+               and os.path.exists(item_path):
                subprocess.call(["mv", item_path, output_subdir], shell=False)
 
       except Exception as e:
@@ -983,51 +1002,6 @@ class TreeSortRunner:
             continue
 
       return
-
-      
-   # When post-processing the result tree file, surround unquoted strain names with single 
-   # quotes and don't process the comment.
-   @staticmethod
-   def quote_strain_names(m: re.Match) -> str:
-
-      start = m.group("start")
-      name = m.group("name")
-      branch = m.group("branch")
-      comment = m.group("comment")
-
-      if comment is None:
-         comment = ""
-
-      return f"{start}'{name}':{branch}{comment}"
-      
-   # When post-processing the result tree file, preface reassorted strain names with the  
-   # segment and nucleotide distance.
-   @staticmethod
-   def replace_strain_names(m: re.Match) -> str:
-
-      name = m.group("name")
-      branch = m.group("branch")
-      segment = m.group("segment")
-      distance = m.group("distance")
-      
-      if not segment:
-         return f"'{name}':{branch}"
-      else:
-         return f"'{segment}({distance}): {name}':{branch}"
-
-   # When post-processing the result tree file, replace TS_NODE_* labels with the segment and  
-   # nucleotide distance. Otherwise, remove the label.
-   @staticmethod
-   def replace_ts_nodes(m: re.Match) -> str:
-
-      branch = m.group("branch")
-      segment = m.group("segment")
-      distance = m.group("distance")
-      
-      if not segment:
-         return f":{branch}"
-      else:
-         return f"'{segment}({distance})':{branch}"
 
 
    # Run prepare_dataset.sh to build alignments and trees and compile a descriptor file.
@@ -1267,6 +1241,9 @@ def main(argv=None) -> bool:
    # Parse the annotated tree file for reassorted strains and create "reassortments.csv".
    runner.create_reassortments_csv_file()
 
+   # Create a PhyloXML version of the result tree.
+   runner.export_tree_as_phyloxml()
+
    # Create a summary HTML file.
    if not runner.create_summary_html():
       traceback.print_exc(file=sys.stderr)
@@ -1275,9 +1252,6 @@ def main(argv=None) -> bool:
 
    # Move intermediate files into a subdirectory in the working directory.
    runner.move_intermediate_files()
-
-   # Modify the annotations in the output tree file.
-   runner.modify_tree_file_comments()
 
    # Print the end time and total duration of main.
    print(f"Finished at {TreeSortRunner.format_end_datetime_with_duration(datetime.now(), main_start)}")
