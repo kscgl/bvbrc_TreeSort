@@ -505,9 +505,10 @@ class TreeSortRunner:
 
       # The values of the JavaScript variables in the template.
       js_variables = {
-         "{{output_subdirectory}}": Constants.OUTPUT_SUBDIRECTORY_NAME,  
-         "{{reassortments_filename}}": Constants.REASSORTMENTS_FILE_NAME,
-         "{{result_filename}}": f"{self.job_data.output_file}{Constants.TREE_FILE_EXTENSION}",
+         "{{nexus_filename}}": f"{self.job_data.output_file}{Constants.TREE_FILE_EXTENSION}",
+         "{{output_subdirectory}}": Constants.OUTPUT_SUBDIRECTORY_NAME, 
+         "{{phyloxml_filename}}": f"{self.job_data.output_file}{Constants.PHYLOXML_FILE_EXTENSION}",
+         "{{reassortments_filename}}": Constants.REASSORTMENTS_FILE_NAME, 
          "\"{{results_json}}\"": self.results.json,
          "{{segments}}": self.job_data.segments,
          "{{treesort_summary}}": treesort_summary,
