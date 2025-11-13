@@ -92,7 +92,7 @@ sub process_treesort
                      csv => 'csv',
                      pdf => 'pdf',
                      xml => 'phyloxml',
-                     tre => 'nwk',
+                     tre => 'unspecified',
                      tsv => 'tsv');
 
    my @suffix_map = map { ("--map-suffix", "$_=$suffix_map{$_}") } keys %suffix_map;
