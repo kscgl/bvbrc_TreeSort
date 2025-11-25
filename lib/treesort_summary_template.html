@@ -304,7 +304,7 @@
                switch (file_.type) {
                   case FileType.nwk:
                   case FileType.phyloxml:
-                     fileURL = createTreeViewURL(`${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`);
+                     fileURL = createTreeViewURL(`${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`, FileType.nwk);
                      break;
                   default:
                      fileURL = `/workspace${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`;
