@@ -539,6 +539,24 @@ class TreeSortRunner:
 
       return True
 
+   # Delete intermediate files that are not needed in the output.
+   def delete_unnecessary_files(self) -> bool:
+
+      files = [
+         Constants.DESCRIPTOR_FILE_NAME, 
+         f"{self.job_data.output_file}.csv"
+      ]
+
+      for file in files:
+         file_path = f"{self.work_directory}/{file}"
+         if os.path.exists(file_path):
+            try:
+               subprocess.call(["rm", file_path], shell=False)
+            except Exception as e:
+               sys.stderr.write(f"Unable to delete file {file_path}:\n {e}\n")
+
+      return True
+   
 
    # Create a PhyloXML version of the result tree.
    def export_tree_as_phyloxml(self) -> bool:
@@ -811,16 +829,10 @@ class TreeSortRunner:
 
          # These files won't be moved to the output subdirectory.
          files_to_exclude = [
-
-            # The primary result files
             Constants.SUMMARY_FILENAME, 
             Constants.REASSORTMENTS_FILE_NAME, 
             output_tree_file, 
-            output_phyloxml_file,
-
-            # Unnecessary files
-            Constants.DESCRIPTOR_FILE_NAME,
-            f"{self.job_data.output_file}.csv",
+            output_phyloxml_file
          ]
 
          # Move "intermediate" (non-final) files and directories to the output subdirectory.
@@ -1384,6 +1396,9 @@ def main(argv=None) -> bool:
       traceback.print_exc(file=sys.stderr)
       sys.stderr.write("An error occurred TreeSortRunner.create_summary_html\n")
       sys.exit(-1)
+
+   # Delete intermediate files that are not needed in the output.
+   runner.delete_unnecessary_files()
 
    # Move intermediate files into a subdirectory in the working directory.
    runner.move_intermediate_files()
