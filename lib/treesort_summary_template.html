@@ -189,6 +189,8 @@
 
          switch (fileType_) {
             case FileType.phyloxml:
+
+               // Create a link to Archaeopteryx. Note that the "treeSort=true" parameter enables TreeSort-specific features in the viewer.
                url = `${baseURL}/view/PhylogeneticTree2/?labelSearch=false&idType=genome_id&labelType=genome_name&wsTreeFile=${filePath_}&fileType=phyloxml&treeSort=true`;
                break;
             default:

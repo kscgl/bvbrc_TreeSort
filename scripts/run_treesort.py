@@ -809,11 +809,24 @@ class TreeSortRunner:
          if not os.path.exists(output_subdir):
             os.mkdir(output_subdir)
 
-         # Move all files and directories except the summary HTML file, the reassortments CSV file, and the result tree file.
+         # These files won't be moved to the output subdirectory.
+         files_to_exclude = [
+
+            # The primary result files
+            Constants.SUMMARY_FILENAME, 
+            Constants.REASSORTMENTS_FILE_NAME, 
+            output_tree_file, 
+            output_phyloxml_file,
+
+            # Unnecessary files
+            Constants.DESCRIPTOR_FILE_NAME,
+            f"{self.job_data.output_file}.csv",
+         ]
+
+         # Move "intermediate" (non-final) files and directories to the output subdirectory.
          for item in os.listdir(self.work_directory):
             item_path = os.path.join(self.work_directory, item)
-            if item not in [Constants.SUMMARY_FILENAME, Constants.REASSORTMENTS_FILE_NAME, output_tree_file, output_phyloxml_file] \
-               and os.path.exists(item_path):
+            if item not in files_to_exclude and os.path.exists(item_path):
                subprocess.call(["mv", item_path, output_subdir], shell=False)
 
       except Exception as e:
