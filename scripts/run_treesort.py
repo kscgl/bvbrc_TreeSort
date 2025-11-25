@@ -1065,14 +1065,14 @@ class TreeSortRunner:
                      segments += ", "
                   segments += f"{segment}({distance})"
 
-                  is_uncertain = "yes" if segment.startswith("?") else "no"
-
-                  # Add properties for segment, distance, (is) reassorted, and (is) uncertain.
+                  # Add properties for segment, distance, and (is) reassorted.
                   properties += (
                      f'<property ref="{PHYLOXML_PROPERTY_REF.segment}" datatype="xsd:string" applies_to="node">{segment}</property>'
                      f'<property ref="{PHYLOXML_PROPERTY_REF.isReassorted}" datatype="xsd:string" applies_to="node">yes</property>'
-                     f'<property ref="{PHYLOXML_PROPERTY_REF.isUncertain}" datatype="xsd:string" applies_to="node">{is_uncertain}</property>'
                   )
+
+                  if segment.startswith("?"):
+                     properties += f'<property ref="{PHYLOXML_PROPERTY_REF.isUncertain}" datatype="xsd:string" applies_to="node">yes</property>'
 
       if is_reassorted and len(segments) > 0:
          if is_tsnode:
