@@ -152,6 +152,9 @@
          tsv: "tsv"
       }
 
+      // The current page's base URL.
+      const baseURL = window.location.origin;
+
       // Variables populated by run_treesort.py.
       const nexusFilename = "{{nexus_filename}}";
       const phyloXmlFilename = "{{phyloxml_filename}}";
@@ -177,15 +180,23 @@
             "didn't have a specified date are inferred from the root-to-tip regression.", type: FileType.csv }
       ]
 
-      // Create a tree viewer URL for the specified file type. File type should be "nwk" or "phyloxml".
-      function createTreeViewURL(filePath_, fileType_) {
+      // Create the appropriate type of link based on the file type.
+      function createFileLink(filePath_, fileType_, label_) {
 
-         if (!filePath_ || !fileType_ || (fileType_ !== FileType.nwk && fileType_ !== FileType.phyloxml)) { 
-            console.error(`Invalid file type in createTreeViewURL: ${fileType_}`); 
-            return null; 
+         if (!filePath_ || !fileType_ || !label_ || !FileType.hasOwnProperty(fileType_)) { return "(file unavailable)"; }
+
+         let url = "";
+
+         switch (fileType_) {
+            case FileType.phyloxml:
+               url = `${baseURL}/view/PhylogeneticTree2/?labelSearch=false&idType=genome_id&labelType=genome_name&wsTreeFile=${filePath_}&fileType=phyloxml&treeSort=true`;
+               break;
+            default:
+               url = `${baseURL}/workspace/${filePath_}`;
+               break;
          }
 
-         return `/view/PhylogeneticTree2/?labelSearch=false&idType=genome_id&labelType=genome_name&wsTreeFile=${filePath_}&fileType=${fileType_}`;
+         return `<a href="${url}" target="_blank">${label_}</a>`;
       }
 
       // Get the segment summary from the JSON.
@@ -208,43 +219,27 @@
       // Update placeholder text on the page.
       function populatePage() {
 
-         // Get a reference to the Nexus file element.
+         // Get a reference to the Nexus file element and populate it.
          const nexusFileEl = document.getElementById("treesort_nexus_file");
          if (nexusFileEl) { 
-            if (nexusFilename) {
-               const url = createTreeViewURL(`${workspaceFolder}${nexusFilename}`, FileType.nwk);
-               nexusFileEl.innerHTML = !url ? "(file unavailable)" : `<a href="${url}" target="_blank">${nexusFilename}</a>`;
-            } else {
-               nexusFileEl.innerHTML = "(file unavailable)";
-            }
+            nexusFileEl.innerHTML = !nexusFilename ? "(file unavailable)" : createFileLink(`${workspaceFolder}${nexusFilename}`, FileType.nwk, nexusFilename);
          }
 
-         // Get a reference to the PhyloXML file element.
+         // Get a reference to the PhyloXML file element and populate it.
          const phyloXmlFileEl = document.getElementById("treesort_phyloxml_file");
          if (phyloXmlFileEl) {
-            if (phyloXmlFilename) {
-               const url = createTreeViewURL(`${workspaceFolder}${phyloXmlFilename}`, FileType.phyloxml);
-               phyloXmlFileEl.innerHTML = !url ? "(file unavailable)" : `<a href="${url}" target="_blank">${phyloXmlFilename}</a>`;
-            } else {
-               phyloXmlFileEl.innerHTML = "(file unavailable)";
-            }
+            phyloXmlFileEl.innerHTML = !phyloXmlFilename ? "(file unavailable)" : createFileLink(`${workspaceFolder}${phyloXmlFilename}`, FileType.phyloxml, phyloXmlFilename);
          }
  
-         // Get a reference to the "reassortments file" element.
+         // Get a reference to the "reassortments file" element and populate it.
          const reassortmentsEl = document.getElementById("treesort_reassortments_file");
          if (reassortmentsEl) {
-            if (reassortmentsFilename) {
-               reassortmentsEl.innerHTML = `<a href="/workspace${workspaceFolder}${reassortmentsFilename}" target="_blank">${reassortmentsFilename}</a>`;
-            } else {
-               reassortmentsEl.innerHTML = "(file unavailable)";
-            }
+            reassortmentsEl.innerHTML = !reassortmentsFilename ? "(file unavailable)" : createFileLink(`${workspaceFolder}${reassortmentsFilename}`, FileType.csv, reassortmentsFilename);
          }
          
-         // Get a reference to the summary element.
+         // Get a reference to the TreeSort summary element and populate it.
          const summaryEl = document.getElementById("treesort_summary");
          if (summaryEl) { 
-
-            // Populate the TreeSort summary HTML.
             summaryEl.innerHTML = !treesortSummary ? "No summary is available" : treesortSummary;
          }
 
@@ -299,20 +294,8 @@
                // Alternate row classes
                const rowClass = index_ % 2 ? "treesort--even" : "treesort--odd";
 
-               let fileURL = "";
+               let fileLink = createFileLink(`${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`, file_.type, `${segment_}${file_.suffix}`);
                
-               switch (file_.type) {
-                  case FileType.nwk:
-                  case FileType.phyloxml:
-                     fileURL = createTreeViewURL(`${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`, FileType.nwk);
-                     break;
-                  default:
-                     fileURL = `/workspace${workspaceFolder}${outputSubdirectory}/${segment_}${file_.suffix}`;
-                     break;
-               }
-               
-               const fileLink = !fileURL ? "(file unavailable)" : `<a href="${fileURL}" target="_blank">${segment_}${file_.suffix}</a>`;
-
                // Create a row for this file.
                rowsHTML += `<tr class="${rowClass}">
                   <td>${fileLink}</td>
