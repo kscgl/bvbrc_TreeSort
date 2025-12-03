@@ -91,7 +91,8 @@ sub process_treesort
    my %suffix_map = (aln => 'aligned_dna_fasta',
                      csv => 'csv',
                      pdf => 'pdf',
-                     tre => 'nwk',
+                     xml => 'phyloxml',
+                     tre => 'unspecified',
                      tsv => 'tsv');
 
    my @suffix_map = map { ("--map-suffix", "$_=$suffix_map{$_}") } keys %suffix_map;
