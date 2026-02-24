@@ -12,7 +12,8 @@ import re
 import subprocess
 import sys
 import traceback
-from typing import Optional
+from typing import Optional, Dict, List, Iterable
+import requests
 
 #-----------------------------------------------------------------------------------------------------------------------------
 # Define constants
@@ -22,6 +23,16 @@ class Constants:
 
    # The BV-BRC URL
    BVBRC_URL = "https://www.bv-brc.org"
+
+   # BV-BRC genome API endpoint
+   GENOME_API = "https://www.bv-brc.org/api/genome/"
+
+   # API record limit per request
+   GENOME_API_LIMIT = 25000
+
+   # Chunk size for IDs inside in(genome_id,(...)) to avoid huge URLs (414 errors)
+   # (Even if limit is 25k, URLs can break before that.)
+   GENOME_API_ID_CHUNK = 500
 
    # The default reference segment.
    DEFAULT_REF_SEGMENT = "HA"
@@ -73,6 +84,17 @@ class Constants:
    # A list of valid segments for the influenza virus.
    VALID_SEGMENTS = ["PB2", "PB1", "PA", "HA", "NP", "NA", "MP", "NS"]
 
+   SEGMENT_NUM_TO_NAME = {
+      "1": "PB2",
+      "2": "PB1",
+      "3": "PA",
+      "4": "HA",
+      "5": "NP",
+      "6": "NA",
+      "7": "MP",
+      "8": "NS",
+   }
+
 # Custom ref attributes for a property element in the PhyloXML file.
 class PHYLOXML_PROPERTY_REF:
    isReassorted = "ts:is_reassorted"
@@ -112,7 +134,7 @@ class InputSource(str, Enum):
    FastaFileID = "fasta_file_id"
 
    # A workspace identifier for a genome group.
-   FastaGroupID = "fasta_group_id"
+   FastaGroupID = "genome_group"
    
 
 class MatchType(str, Enum):
@@ -176,9 +198,6 @@ class JobData:
    equal_rates: bool
    inference_method: Optional[InferenceMethod]
    input_fasta_existing_dataset: Optional[str]
-   input_fasta_data: Optional[str]
-   input_fasta_file_id: Optional[str]
-   input_fasta_group_id: Optional[str]
    input_source: InputSource
    match_regex: Optional[str]
    match_type: Optional[MatchType]
@@ -189,6 +208,9 @@ class JobData:
    ref_segment: str
    ref_tree_inference: TreeInference
    segments: Optional[str]
+   input_fasta_data: Optional[str] = None
+   input_fasta_file_id: Optional[str] = None
+   input_fasta_group_id: Optional[str] = None
 
 # A collection of result data to include in the analysis HTML file.
 class Results:
@@ -957,6 +979,252 @@ class TreeSortRunner:
       return
    
 
+   def _chunked(self, items: List[str], n: int) -> Iterable[List[str]]:
+      for i in range(0, len(items), n):
+         yield items[i:i+n]
+
+
+   def get_genome_ids_from_group(self, group_path: str) -> List[str]:
+      """
+      Uses p3-get-genome-group "<workspace path>" and extracts genome_ids like 11320.471792
+      """
+      try:
+         result = subprocess.run(
+            ["p3-get-genome-group", group_path],
+            shell=False,
+            capture_output=True,
+            text=True
+         )
+         if result.returncode != 0:
+            raise Exception(result.stderr)
+
+         ids: List[str] = []
+         for line in result.stdout.splitlines():
+            line = safe_trim(line)
+            if re.fullmatch(r"\d+\.\d+", line):
+               ids.append(line)
+
+         if not ids:
+            raise ValueError(f"No genome IDs found in genome group: {group_path}")
+
+         return ids
+
+      except Exception as e:
+         raise Exception(f"Error reading genome group:\n {e}")
+
+
+   def normalize_collection_date(self, date_str: Optional[str]) -> str:
+      """
+      Normalize to YYYY-MM-DD:
+        YYYY -> YYYY-01-01
+        YYYY-MM -> YYYY-MM-01
+        YYYY-MM-DD -> as-is
+      Otherwise -> 0000-00-00
+      """
+      s = safe_trim(date_str)
+      if not s:
+         return "0000-00-00"
+      if re.fullmatch(r"\d{4}-\d{2}-\d{2}", s):
+         return s
+      if re.fullmatch(r"\d{4}-\d{2}", s):
+         return f"{s}-01"
+      if re.fullmatch(r"\d{4}", s):
+         return f"{s}-01-01"
+      return "0000-00-00"
+
+
+   def fetch_metadata_for_ids(self, genome_ids: List[str]) -> Dict[str, Dict[str, str]]:
+      """
+      Calls:
+        /api/genome/?in(genome_id,(...))&select(genome_id,strain,subtype,segment,collection_date)&limit(25000)
+      Returns dict[genome_id] = {strain, subtype, segment, collection_date}
+      """
+      ids_csv = ",".join(genome_ids)
+
+      url = (
+         f"{Constants.GENOME_API}"
+         f"?in(genome_id,({ids_csv}))"
+         f"&select(genome_id,strain,subtype,segment,collection_date)"
+         f"&limit({Constants.GENOME_API_LIMIT})"
+      )
+
+      r = requests.get(url, timeout=60)
+      r.raise_for_status()
+
+      data = r.json()
+      meta: Dict[str, Dict[str, str]] = {}
+
+      for rec in data:
+         gid = safe_trim(str(rec.get("genome_id", "")))
+         if not gid:
+            continue
+
+         raw_segment = safe_trim(rec.get("segment"))
+
+         # Convert numeric segment to canonical name
+         segment_name = Constants.SEGMENT_NUM_TO_NAME.get(
+            raw_segment,
+            raw_segment.upper()
+         )
+
+         meta[gid] = {
+            "strain": safe_trim(rec.get("strain")),
+            "subtype": safe_trim(rec.get("subtype")),
+            "segment": segment_name,
+            "collection_date": self.normalize_collection_date(rec.get("collection_date")),
+         }
+
+      return meta
+
+
+   def fetch_all_metadata(self, genome_ids: List[str]) -> Dict[str, Dict[str, str]]:
+      """
+      Fetch in chunks to avoid enormous URL length (even if API limit is 25k).
+      """
+      all_meta: Dict[str, Dict[str, str]] = {}
+      for batch in self._chunked(genome_ids, Constants.GENOME_API_ID_CHUNK):
+         batch_meta = self.fetch_metadata_for_ids(batch)
+         all_meta.update(batch_meta)
+      return all_meta
+
+
+   def filter_ids_by_segments(self, genome_ids: List[str], meta: Dict[str, Dict[str, str]]) -> List[str]:
+      """
+      Keep only genomes whose metadata.segment is in job_data.segments.
+      """
+      segments = safe_trim(self.job_data.segments)
+      if len(segments) < 1:
+         # If empty means "all segments" in TreeSort, then don't filter.
+         return genome_ids
+
+      allowed = {safe_trim(s).upper() for s in segments.split(",") if safe_trim(s)}
+      kept: List[str] = []
+
+      for gid in genome_ids:
+         m = meta.get(gid)
+         if not m:
+            continue
+
+         segment = safe_trim(m.get("segment")).upper()
+
+         if segment in allowed:
+            kept.append(gid)
+
+      return kept
+
+
+   def download_genome_fasta(self, genome_id: str) -> str:
+      """
+      Uses p3-genome-fasta <genome_id>
+      """
+      result = subprocess.run(
+         ["p3-genome-fasta", genome_id],
+         shell=False,
+         capture_output=True,
+         text=True
+      )
+      if result.returncode != 0:
+         raise Exception(result.stderr)
+      return result.stdout
+
+
+   def rewrite_fasta_headers(self, fasta_text: str, fasta_name: str) -> str:
+      """
+      Rewrite header lines to:
+        >STRAIN|SUBTYPE|SEGMENT|YYYY-MM-DD
+      """
+      new_header = f">{fasta_name}"
+
+      out_lines = []
+      for line in fasta_text.splitlines():
+         if line.startswith(">"):
+            out_lines.append(new_header)
+         else:
+            out_lines.append(line.rstrip())
+
+      return "\n".join(out_lines).rstrip() + "\n"
+
+
+   def build_input_fasta_from_group(self, group_path: str, out_fasta_path: str) -> None:
+      """
+      Full pipeline:
+        1) genome IDs from group
+        2) metadata fetch (chunked)
+        3) filter by job_data.segments
+        4) download fasta per genome
+        5) rewrite headers + concatenate -> out_fasta_path
+
+      Extra:
+        - de-duplicate by FASTA name (strain|subtype|segment|YYYY-MM-DD)
+        - log duplicates / missing metadata / download failures
+      """
+      sys.stdout.write(f"\nBuilding input FASTA from genome group: {group_path}\n")
+
+      genome_ids = self.get_genome_ids_from_group(group_path)
+      sys.stdout.write(f"Genome IDs found in group: {len(genome_ids)}\n")
+
+      meta = self.fetch_all_metadata(genome_ids)
+      sys.stdout.write(f"Metadata records fetched: {len(meta)}\n")
+
+      filtered = self.filter_ids_by_segments(genome_ids, meta)
+      sys.stdout.write(f"Genome IDs after segment filter: {len(filtered)}\n")
+
+      if not filtered:
+         raise ValueError("No genomes remained after segment filtering")
+
+      # Track duplicates by the exact sequence ID TreeSort/alignment will see.
+      seen_names: set[str] = set()
+      with open(out_fasta_path, "w", encoding="utf-8") as fout:
+         for gid in filtered:
+            m = meta.get(gid)
+
+            if not m:
+               sys.stdout.write(f"SKIP_MISSING_METADATA genome_id={gid}\n")
+               continue
+
+            strain = m.get("strain")
+            subtype = m.get("subtype")
+            segment = m.get("segment")
+            date = m.get("collection_date")
+
+            # Enforce required fields
+            missing_fields = []
+
+            if not strain:
+               missing_fields.append("strain")
+            if not subtype:
+               missing_fields.append("subtype")
+            if not segment:
+               missing_fields.append("segment")
+            if not date or date == "0000-00-00":
+               missing_fields.append("collection_date")
+
+            if missing_fields:
+               sys.stdout.write(
+                  f"SKIP_MISSING_REQUIRED genome_id={gid} "
+                  f"missing={','.join(missing_fields)}\n"
+               )
+               continue
+
+            strain = strain.replace(" ", "_")
+            fasta_name = f"{strain}|{subtype}|{segment}|{date}"
+            if fasta_name in seen_names:
+               sys.stdout.write(f"IGNORING_DUPLICATE genome_id={gid} name='{fasta_name}'\n")
+               continue
+
+            fasta = self.download_genome_fasta(gid)
+            if not fasta or len(safe_trim(fasta)) == 0:
+               sys.stdout.write(f"SKIP_EMPTY_FASTA genome_id={gid} name='{fasta_name}'\n")
+               continue
+
+            rewritten = self.rewrite_fasta_headers(fasta, fasta_name)
+            fout.write(rewritten)
+
+            seen_names.add(fasta_name)
+
+      sys.stdout.write(f"Combined FASTA written: {out_fasta_path}\n")
+
+
    # Determine the source of the FASTA input file and prepare it for use.
    def prepare_input_file(self) -> bool:
 
@@ -981,10 +1249,17 @@ class TreeSortRunner:
 
          elif input_source == InputSource.FastaGroupID.value:
 
-            # TODO: Figure out the best way to handle this scenario.
-            raise ValueError("Processing a genome group is not yet implemented")
+            # Create the input filename, including its full path.
+            self.input_filename = f"{self.input_directory}/{Constants.INPUT_FASTA_FILE_NAME}"
 
-         elif input_source == InputSource.FastaExistingDataset:
+            group_path = safe_trim(self.job_data.input_fasta_group_id)
+            if len(group_path) < 1:
+               raise ValueError("Invalid input genome group id/path")
+
+            # Build input.fasta from the genome group (downloads + rewrites headers)
+            self.build_input_fasta_from_group(group_path, self.input_filename)
+
+         elif input_source == InputSource.FastaExistingDataset.value:
 
             # TODO: Figure out the best way to handle this scenario.
             raise ValueError("Processing an existing dataset is not yet implemented")
@@ -1294,6 +1569,11 @@ class TreeSortRunner:
 
             # Remove the "ws:" prefix from the directory name.
             job_data.input_fasta_file_id = job_data.input_fasta_file_id[3:]
+      elif job_data.input_source == InputSource.FastaGroupID.value:
+
+         # Make sure an input_fasta_group_id value was provided.
+         if not job_data.input_fasta_group_id:
+            raise ValueError("The input FASTA group ID is invalid")
       else:
          raise ValueError("The input source is invalid")
       

@@ -81,7 +81,7 @@
          "default": "fasta_file_id",
          "label": "Input source",
          "desc": "Is the input a FASTA sequence, the ID of a FASTA file in the workspace, a directory with previously prepared files, or a genome group from the workspace?",
-         "enum": ["fasta_data", "fasta_existing_dataset", "fasta_file_id", "fasta_group_id"],
+         "enum": ["fasta_data", "fasta_existing_dataset", "fasta_file_id", "genome_group"],
          "type": "enum"
       },
       {
